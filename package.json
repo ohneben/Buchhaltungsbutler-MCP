@@ -1,0 +1,52 @@
+{
+  "name": "buchhaltungsbutler-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for the BuchhaltungsButler API (v1). Exposes all 48 endpoints as categorized MCP tools (read-only / write / destructive).",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "buchhaltungsbutler",
+    "accounting",
+    "bookkeeping",
+    "buchhaltung",
+    "api"
+  ],
+  "license": "MIT",
+  "author": "ohneben",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ohneben/Buchhaltungsbutler-MCP.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ohneben/Buchhaltungsbutler-MCP/issues"
+  },
+  "homepage": "https://github.com/ohneben/Buchhaltungsbutler-MCP#readme",
+  "type": "module",
+  "bin": {
+    "buchhaltungsbutler-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "spec.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:stdio": "MCP_TRANSPORT=stdio node dist/index.js",
+    "start:http": "MCP_TRANSPORT=http node dist/index.js",
+    "dev": "tsc --watch",
+    "list-tools": "node dist/list-tools.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
