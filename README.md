@@ -30,6 +30,31 @@ LLM** and **easy to run for real**:
 | **Built-in rate limiting** | Self-throttles under BuchhaltungsButler's 100 requests/customer/minute cap so you never trip it. |
 | **Your secrets never reach the model** | Credentials live in the server's environment and are injected on every request — the assistant only ever sees tool inputs and API responses. |
 
+### How it compares
+
+At the time of writing this appears to be the only dedicated BuchhaltungsButler MCP
+server. You *could* instead point a generic OpenAPI→MCP wrapper at the spec — here's
+what that leaves on the table:
+
+| Capability | **This project** | Generic OpenAPI→MCP wrapper\* |
+| --- | :---: | :---: |
+| All 48 BuchhaltungsButler endpoints as tools | ✅ | ✅ |
+| Per-tool 🟢 / 🟡 / 🔴 safety category + banner | ✅ | ❌ |
+| `readOnlyHint` / `destructiveHint` MCP annotations | ✅ | ➖ |
+| `$ref` batch-payload resolution + HTML-stripped descriptions | ✅ | ➖ |
+| Built-in rate limiting (stays under BB's 100/customer/min) | ✅ | ❌ |
+| `stdio` transport | ✅ | ✅ |
+| **Streamable-HTTP transport** | ✅ | ➖ |
+| **Docker + docker-compose**, health check, auto-restart | ✅ | ❌ |
+| **Optional bearer-token auth** on the endpoint | ✅ | ❌ |
+| Credentials injected server-side, never sent to the model | ✅ | ➖ |
+| License | MIT | varies |
+
+<sub>\*Generic OpenAPI→MCP wrappers turn any Swagger/OpenAPI spec into MCP tools. They
+can reach the same endpoints, but treat every operation identically — no safety
+categories, no deployment story, and no guardrails tuned for live accounting data.
+"➖" = varies by tool / not guaranteed. Snapshot from July 2026.</sub>
+
 ## What you can do
 
 Once it's connected, ask your assistant things like:
