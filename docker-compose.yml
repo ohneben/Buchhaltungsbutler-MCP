@@ -1,0 +1,21 @@
+services:
+  buchhaltungsbutler-mcp:
+    build: .
+    image: buchhaltungsbutler-mcp:latest
+    container_name: buchhaltungsbutler-mcp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MCP_TRANSPORT: http
+      PORT: 3000
+      # --- required BuchhaltungsButler credentials ---
+      BB_API_CLIENT: ${BB_API_CLIENT}
+      BB_API_SECRET: ${BB_API_SECRET}
+      BB_API_KEY: ${BB_API_KEY}
+      # --- optional ---
+      # Shared secret required as `Authorization: Bearer <token>` on the /mcp endpoint.
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      BB_RATE_LIMIT: ${BB_RATE_LIMIT:-90}
+    env_file:
+      - .env
