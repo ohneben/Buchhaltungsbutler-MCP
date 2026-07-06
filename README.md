@@ -1,6 +1,7 @@
 # ohneben's Buchhaltungsbutler MCP
 
 [![CI](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/ci.yml)
+[![Publish Docker image](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE.md)
 
 Manage your [BuchhaltungsButler](https://www.buchhaltungsbutler.de/) bookkeeping in
@@ -130,6 +131,16 @@ in your client config, then fully quit and reopen the app:
 ```
 
 (Drop the `--header` line if you left `MCP_AUTH_TOKEN` empty.)
+
+### Prefer a prebuilt image?
+
+Every push to `main` publishes a ready-to-run image to the GitHub Container
+Registry, so you can skip the local build entirely:
+
+```bash
+docker run -d --name buchhaltungsbutler-mcp -p 3000:3000 --env-file .env \
+  ghcr.io/ohneben/buchhaltungsbutler-mcp:latest
+```
 
 ## Get your API credentials
 
@@ -325,6 +336,18 @@ npm run build
 New paths are picked up automatically; add them to `PATH_CATEGORY` in
 `src/categories.ts` so they get the correct safety category (unmapped paths fall back
 to the safe-but-conservative *create* category).
+
+## Development
+
+```bash
+npm install
+npm run build      # compile TypeScript → dist/
+npm test           # run the Vitest suite
+npm run list-tools # print the categorized tool catalog (no credentials needed)
+```
+
+CI builds and tests every push across Node 20 and 22; pushes to `main` also publish a
+Docker image to the GitHub Container Registry.
 
 ## Notes & conventions
 
