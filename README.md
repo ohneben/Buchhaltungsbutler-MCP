@@ -1,119 +1,124 @@
 # ohneben's Buchhaltungsbutler MCP
 
 [![CI](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/ci.yml)
-[![Publish Docker image](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE.md)
+[![Docker-Image veröffentlichen](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ohneben/Buchhaltungsbutler-MCP/actions/workflows/docker-publish.yml)
+[![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-green.svg)](./LICENSE.md)
 
-Manage your [BuchhaltungsButler](https://www.buchhaltungsbutler.de/) bookkeeping in
-plain language from AI assistants like **Claude**, **Cursor**, and any other
-[MCP](https://modelcontextprotocol.io) client.
+Verwalte deine [BuchhaltungsButler](https://www.buchhaltungsbutler.de/)-Buchhaltung in
+natürlicher Sprache aus KI-Assistenten wie **Claude**, **Cursor** und jedem anderen
+[MCP](https://modelcontextprotocol.io)-Client.
 
-This [Model Context Protocol](https://modelcontextprotocol.io) server exposes the
-**[BuchhaltungsButler API v1](https://app.buchhaltungsbutler.de/docs/api/v1/)** —
-all **48 endpoints**, auto-generated from the official OpenAPI spec into MCP tools.
-Every tool is **safety-categorized** (read-only / write / destructive) so your
-assistant knows what an action does *before* it calls it. Runs over **stdio**
-(Claude Desktop and other local launchers) or **Streamable HTTP** (hosted in Docker).
+Dieser [Model-Context-Protocol](https://modelcontextprotocol.io)-Server stellt die
+**[BuchhaltungsButler API v1](https://app.buchhaltungsbutler.de/docs/api/v1/)** bereit —
+alle **54 Endpunkte**, automatisch aus der offiziellen OpenAPI-Spezifikation
+(Spec-Version **1.9.1**) als MCP-Tools generiert. Jedes Tool ist
+**sicherheitskategorisiert** (nur lesend / schreibend / destruktiv), damit dein Assistent
+weiß, was eine Aktion tut, *bevor* er sie ausführt. Läuft über **stdio**
+(Claude Desktop und andere lokale Launcher) oder **Streamable HTTP** (gehostet in Docker).
 
-## Why you'll want this
+## Warum dieser Server
 
-Some MCP servers just forward an API. This one is built to be **safe to hand to an
-LLM** and **easy to run for real**:
+Manche MCP-Server leiten eine API einfach nur weiter. Dieser hier ist darauf ausgelegt,
+**gefahrlos an ein Sprachmodell übergeben** und **im Alltag betrieben** werden zu können:
 
-| What you get | Why it matters |
+| Was du bekommst | Warum das zählt |
 | --- | --- |
-| **All 48 endpoints, auto-generated** from the official spec | Full coverage of receipts, transactions, postings, invoices and master data — nothing hand-picked or left behind. |
-| **Every tool is safety-categorized** 🟢 / 🟡 / 🔴 | A banner at the top of each tool description tells the model exactly what it does — fetch, create, update, revert or delete — before it acts. |
-| **Machine-readable MCP annotations** (`readOnlyHint`, `destructiveHint`) | Hosts that honor annotations (Claude included) can auto-trust reads and demand confirmation before anything destructive. |
-| **Two transports: stdio *and* Streamable HTTP** | Use it locally in Claude Desktop, or run one always-on server that any number of MCP clients reach over HTTP. |
-| **Docker + docker-compose, health check, auto-restart** | Production-style deployment out of the box: `docker compose up` and it stays up. |
-| **Optional bearer-token auth** on the HTTP endpoint | Put the server behind a shared secret the moment it's reachable beyond localhost. |
-| **Built-in rate limiting** | Self-throttles under BuchhaltungsButler's 100 requests/customer/minute cap so you never trip it. |
-| **Your secrets never reach the model** | Credentials live in the server's environment and are injected on every request — the assistant only ever sees tool inputs and API responses. |
+| **Alle 54 Endpunkte, automatisch generiert** aus der offiziellen Spec | Vollständige Abdeckung von Belegen, Transaktionen, Buchungen, Rechnungen, Auswertungen und Stammdaten — nichts handverlesen, nichts vergessen. |
+| **Jedes Tool ist sicherheitskategorisiert** 🟢 / 🟡 / 🔴 | Ein Banner am Anfang jeder Tool-Beschreibung sagt dem Modell genau, was passiert — lesen, anlegen, ändern, zurücknehmen oder löschen — bevor es handelt. |
+| **Maschinenlesbare MCP-Annotationen** (`readOnlyHint`, `destructiveHint`) | Hosts, die Annotationen auswerten (Claude gehört dazu), können Lesezugriffe automatisch zulassen und vor destruktiven Aktionen eine Bestätigung verlangen. |
+| **Zwei Transporte: stdio *und* Streamable HTTP** | Lokal in Claude Desktop nutzen — oder einen dauerhaft laufenden Server betreiben, den beliebig viele MCP-Clients über HTTP erreichen. |
+| **Docker + docker-compose, Health-Check, Auto-Restart** | Produktionsnahes Deployment ab Werk: `docker compose up`, und er bleibt oben. |
+| **Optionale Bearer-Token-Authentifizierung** am HTTP-Endpunkt | Sichere den Server mit einem gemeinsamen Geheimnis ab, sobald er über localhost hinaus erreichbar ist. |
+| **Eingebautes Rate-Limiting** | Drosselt sich selbst unter dem BuchhaltungsButler-Limit von 100 Anfragen/Kunde/Minute, damit du nie dagegenläufst. |
+| **Deine Zugangsdaten erreichen das Modell nie** | Die Credentials liegen in der Server-Umgebung und werden pro Anfrage injiziert — der Assistent sieht nur Tool-Eingaben und API-Antworten. |
 
-### How it compares
+### Im Vergleich
 
-At the time of writing this appears to be the only dedicated BuchhaltungsButler MCP
-server. You *could* instead point a generic OpenAPI→MCP wrapper at the spec — here's
-what that leaves on the table:
+Nach aktuellem Stand ist dies der einzige dedizierte BuchhaltungsButler-MCP-Server.
+Alternativ *könntest* du einen generischen OpenAPI→MCP-Wrapper auf die Spec richten —
+das lässt allerdings einiges liegen:
 
-| Capability | **This project** | Generic OpenAPI→MCP wrapper\* |
+| Fähigkeit | **Dieses Projekt** | Generischer OpenAPI→MCP-Wrapper\* |
 | --- | :---: | :---: |
-| All 48 BuchhaltungsButler endpoints as tools | ✅ | ✅ |
-| Per-tool 🟢 / 🟡 / 🔴 safety category + banner | ✅ | ❌ |
-| `readOnlyHint` / `destructiveHint` MCP annotations | ✅ | ➖ |
-| `$ref` batch-payload resolution + HTML-stripped descriptions | ✅ | ➖ |
-| Built-in rate limiting (stays under BB's 100/customer/min) | ✅ | ❌ |
-| `stdio` transport | ✅ | ✅ |
-| **Streamable-HTTP transport** | ✅ | ➖ |
-| **Docker + docker-compose**, health check, auto-restart | ✅ | ❌ |
-| **Optional bearer-token auth** on the endpoint | ✅ | ❌ |
-| Credentials injected server-side, never sent to the model | ✅ | ➖ |
-| License | MIT | varies |
+| Alle 54 BuchhaltungsButler-Endpunkte als Tools | ✅ | ✅ |
+| 🟢 / 🟡 / 🔴 Sicherheitskategorie + Banner pro Tool | ✅ | ❌ |
+| `readOnlyHint` / `destructiveHint` MCP-Annotationen | ✅ | ➖ |
+| `$ref`-Auflösung für Batch-Payloads + HTML-bereinigte Beschreibungen | ✅ | ➖ |
+| Eingebautes Rate-Limiting (bleibt unter BBs 100/Kunde/Min.) | ✅ | ❌ |
+| `stdio`-Transport | ✅ | ✅ |
+| **Streamable-HTTP-Transport** | ✅ | ➖ |
+| **Docker + docker-compose**, Health-Check, Auto-Restart | ✅ | ❌ |
+| **Optionale Bearer-Token-Auth** am Endpunkt | ✅ | ❌ |
+| Credentials serverseitig injiziert, nie ans Modell gesendet | ✅ | ➖ |
+| Lizenz | MIT | unterschiedlich |
 
-<sub>\*Generic OpenAPI→MCP wrappers turn any Swagger/OpenAPI spec into MCP tools. They
-can reach the same endpoints, but treat every operation identically — no safety
-categories, no deployment story, and no guardrails tuned for live accounting data.
-"➖" = varies by tool / not guaranteed. Snapshot from July 2026.</sub>
+<sub>\*Generische OpenAPI→MCP-Wrapper machen aus jeder Swagger-/OpenAPI-Spec MCP-Tools.
+Sie erreichen dieselben Endpunkte, behandeln aber jede Operation gleich — keine
+Sicherheitskategorien, keine Betriebsgeschichte, keine auf echte Buchhaltungsdaten
+abgestimmten Leitplanken. „➖“ = je nach Werkzeug unterschiedlich / nicht garantiert.</sub>
 
-## What you can do
+## Was du damit machen kannst
 
-Once it's connected, ask your assistant things like:
+Sobald der Server verbunden ist, kannst du deinen Assistenten zum Beispiel bitten:
 
-- "List all inbound receipts from last month that are still unpaid."
-- "Create a draft invoice for ACME GmbH: 10 hours of consulting at €120 each."
-- "Book this bank transaction against posting account 4400."
-- "Upload this PDF receipt and assign it to the matching transaction."
-- "Show me my creditors, and add a new one for our hosting provider."
+- „Liste alle Eingangsbelege vom letzten Monat auf, die noch offen sind.“
+- „Erstelle einen Rechnungsentwurf für die ACME GmbH: 10 Stunden Beratung à 120 €.“
+- „Buche diese Banktransaktion auf Sachkonto 4400.“
+- „Lade diesen PDF-Beleg hoch und ordne ihn der passenden Transaktion zu.“
+- „Zeig mir meine Kreditoren und leg einen neuen für unseren Hosting-Anbieter an.“
+- „Erstelle mir die BWA für das letzte Quartal und zeig mir das Kontenblatt zu Konto 4400.“
 
-Tools are generated automatically from the official API and grouped into 🟢 read-only,
-🟡 write, and 🔴 destructive — so a well-behaved host can treat each group differently.
+Die Tools werden automatisch aus der offiziellen API generiert und in 🟢 nur lesend,
+🟡 schreibend und 🔴 destruktiv gruppiert — ein gut umgesetzter Host kann jede Gruppe
+unterschiedlich behandeln.
 
-## How it works
+## Funktionsweise
 
 ```
-Claude / Cursor / any MCP client  ──MCP──►  this server  ──HTTPS──►  BuchhaltungsButler API (cloud)
+Claude / Cursor / beliebiger MCP-Client  ──MCP──►  dieser Server  ──HTTPS──►  BuchhaltungsButler API (Cloud)
 ```
 
-The server parses the bundled OpenAPI spec into MCP tools (resolving `$ref` batch
-payloads and stripping HTML from descriptions), tags each with its safety category,
-and injects your Basic-auth credentials and `api_key` on every outgoing request.
-Your credentials stay in the server's environment — the model never sees or handles
-them.
+Der Server liest die mitgelieferte OpenAPI-Spec ein und macht daraus MCP-Tools (inklusive
+Auflösung von `$ref`-Batch-Payloads und Entfernen von HTML aus den Beschreibungen),
+versieht jedes Tool mit seiner Sicherheitskategorie und hängt deine Basic-Auth-Credentials
+sowie den `api_key` an jede ausgehende Anfrage. Deine Zugangsdaten bleiben in der
+Server-Umgebung — das Modell sieht sie nie und fasst sie nie an.
 
-## Requirements
+## Voraussetzungen
 
-- A **BuchhaltungsButler account with API access** — an **API Client + API Secret**
-  (Settings → API) and a **customer `api_key`** (see [Get your API credentials](#get-your-api-credentials)).
-- **Docker** (Docker Desktop on macOS/Windows) for the quick start below — or
-  **Node.js ≥ 18** to [run from source](#run-from-source-stdio-no-docker).
+- Ein **BuchhaltungsButler-Konto mit API-Zugang** — ein **API Client + API Secret**
+  (Einstellungen → API) sowie ein Kunden-**`api_key`**
+  (siehe [API-Zugangsdaten besorgen](#api-zugangsdaten-besorgen)).
+- **Docker** (Docker Desktop unter macOS/Windows) für den Schnellstart unten — oder
+  **Node.js ≥ 18**, um [aus dem Quellcode zu starten](#aus-dem-quellcode-starten-stdio-ohne-docker).
 
-## Quick start (Docker)
+## Schnellstart (Docker)
 
-**1. Add your credentials.** Copy the example config and fill it in:
+**1. Zugangsdaten hinterlegen.** Beispielkonfiguration kopieren und ausfüllen:
 
 ```bash
 cp .env.example .env
-# edit .env → set BB_API_CLIENT, BB_API_SECRET, BB_API_KEY
-#           → set MCP_AUTH_TOKEN to a long random string if reachable beyond localhost
+# .env bearbeiten → BB_API_CLIENT, BB_API_SECRET, BB_API_KEY setzen
+#                 → MCP_AUTH_TOKEN auf eine lange Zufallszeichenkette setzen,
+#                   falls der Server über localhost hinaus erreichbar ist
 ```
 
-**2. Start the server:**
+**2. Server starten:**
 
 ```bash
 docker compose up -d --build
 ```
 
-**3. Confirm it's running:**
+**3. Prüfen, ob er läuft:**
 
 ```bash
 curl -s http://localhost:3000/health     # → {"status":"ok","server":"buchhaltungsbutler-mcp"}
 ```
 
-**4. Connect your MCP client.** Remote endpoints are added in Claude as a **custom
-connector** (Settings → Connectors), or bridged locally with
-[`mcp-remote`](https://www.npmjs.com/package/mcp-remote). Add this under `mcpServers`
-in your client config, then fully quit and reopen the app:
+**4. MCP-Client verbinden.** Entfernte Endpunkte werden in Claude als **Custom Connector**
+hinzugefügt (Einstellungen → Connectors) oder lokal mit
+[`mcp-remote`](https://www.npmjs.com/package/mcp-remote) gebrückt. Trage Folgendes unter
+`mcpServers` in deiner Client-Konfiguration ein und starte die App danach vollständig neu:
 
 ```json
 {
@@ -123,81 +128,84 @@ in your client config, then fully quit and reopen the app:
       "args": [
         "mcp-remote",
         "http://localhost:3000/mcp",
-        "--header", "Authorization: Bearer YOUR_MCP_AUTH_TOKEN"
+        "--header", "Authorization: Bearer DEIN_MCP_AUTH_TOKEN"
       ]
     }
   }
 }
 ```
 
-(Drop the `--header` line if you left `MCP_AUTH_TOKEN` empty.)
+(Die `--header`-Zeile entfällt, wenn du `MCP_AUTH_TOKEN` leer gelassen hast.)
 
-### Prefer a prebuilt image?
+### Lieber ein fertiges Image?
 
-Every push to `main` publishes a ready-to-run image to the GitHub Container
-Registry, so you can skip the local build entirely:
+Jeder Push auf `main` veröffentlicht ein startbereites Image in der GitHub Container
+Registry — damit kannst du den lokalen Build komplett überspringen:
 
 ```bash
 docker run -d --name buchhaltungsbutler-mcp -p 3000:3000 --env-file .env \
   ghcr.io/ohneben/buchhaltungsbutler-mcp:latest
 ```
 
-## Get your API credentials
+## API-Zugangsdaten besorgen
 
-BuchhaltungsButler uses two layers of authentication (see the
-[official docs](https://app.buchhaltungsbutler.de/docs/api/v1/)):
+BuchhaltungsButler nutzt zwei Authentifizierungsebenen (siehe die
+[offizielle Dokumentation](https://app.buchhaltungsbutler.de/docs/api/v1/)):
 
-1. **HTTP Basic auth** — an **API Client** + **API Secret**, your global API
-   credentials. Find or create them in BuchhaltungsButler under **Settings → API**.
-2. **`api_key`** — identifies *which customer account* a request acts on. It lives in
-   that customer's company-data settings.
+1. **HTTP-Basic-Auth** — ein **API Client** + **API Secret**, deine globalen
+   API-Zugangsdaten. Zu finden bzw. anzulegen in BuchhaltungsButler unter
+   **Einstellungen → API**.
+2. **`api_key`** — legt fest, *auf welches Kundenkonto* sich eine Anfrage bezieht. Er
+   steht in den Firmendaten-Einstellungen des jeweiligen Kunden.
 
-Put all three in `.env`. The server injects them on every request, so your assistant
-never sees them. A single tool call may optionally pass its own `api_key` to target a
-different customer.
+Trage alle drei Werte in `.env` ein. Der Server hängt sie an jede Anfrage an, dein
+Assistent bekommt sie also nie zu sehen. Ein einzelner Tool-Aufruf kann optional einen
+eigenen `api_key` mitgeben, um ein anderes Kundenkonto anzusprechen.
 
-## Configuration
+## Konfiguration
 
-Everything is set in `.env` (copied from `.env.example`):
+Alles wird in `.env` gesetzt (kopiert aus `.env.example`):
 
-| Variable | Required | Default | Description |
+| Variable | Pflicht | Standard | Beschreibung |
 |---|---|---|---|
-| `BB_API_CLIENT` | ✅ | — | API Client (Basic-auth username) |
-| `BB_API_SECRET` | ✅ | — | API Secret (Basic-auth password) |
-| `BB_API_KEY` | ✅ | — | Default customer `api_key` |
-| `MCP_TRANSPORT` | — | `stdio` | `stdio` or `http` (the Docker image defaults to `http`) |
-| `PORT` | — | `3000` | HTTP listen port |
-| `HOST` | — | `0.0.0.0` | HTTP bind address |
-| `MCP_HTTP_PATH` | — | `/mcp` | HTTP MCP route |
-| `MCP_AUTH_TOKEN` | — | _(off)_ | Require `Authorization: Bearer <token>` on `/mcp` |
-| `BB_RATE_LIMIT` | — | `90` | Client-side requests/minute cap |
-| `BB_BASE_URL` | — | _(from spec)_ | Override the API base URL |
+| `BB_API_CLIENT` | ✅ | — | API Client (Basic-Auth-Benutzername) |
+| `BB_API_SECRET` | ✅ | — | API Secret (Basic-Auth-Passwort) |
+| `BB_API_KEY` | ✅ | — | Standard-Kunden-`api_key` |
+| `MCP_TRANSPORT` | — | `stdio` | `stdio` oder `http` (das Docker-Image nutzt standardmäßig `http`) |
+| `PORT` | — | `3000` | HTTP-Port, auf dem gelauscht wird |
+| `HOST` | — | `0.0.0.0` | HTTP-Bind-Adresse |
+| `MCP_HTTP_PATH` | — | `/mcp` | HTTP-Route für MCP |
+| `MCP_AUTH_TOKEN` | — | _(aus)_ | Verlangt `Authorization: Bearer <Token>` auf `/mcp` |
+| `BB_RATE_LIMIT` | — | `90` | Clientseitiges Limit an Anfragen pro Minute |
+| `BB_BASE_URL` | — | _(aus der Spec)_ | Überschreibt die Basis-URL der API |
 
-After changing `.env`, reload with `docker compose up -d --force-recreate`.
+Nach Änderungen an `.env` neu laden mit `docker compose up -d --force-recreate`.
 
-## Tool safety categories
+## Sicherheitskategorien der Tools
 
-Each tool's description starts with one of these banners and carries the matching
-[MCP annotations](https://modelcontextprotocol.io/docs/concepts/tools#tool-annotations):
+Jede Tool-Beschreibung beginnt mit einem dieser Banner und trägt die passenden
+[MCP-Annotationen](https://modelcontextprotocol.io/docs/concepts/tools#tool-annotations):
 
-| Banner | Count | `readOnlyHint` | `destructiveHint` | Meaning |
+| Banner | Anzahl | `readOnlyHint` | `destructiveHint` | Bedeutung |
 |---|---|---|---|---|
-| 🟢 **READ-ONLY** | 12 | `true` | `false` | Fetches data only. Safe. |
-| 🟡 **WRITE · creates data** | 22 | `false` | `false` | Creates records (not idempotent — may duplicate). |
-| 🟡 **WRITE · updates data** | 4 | `false` | `false` | Modifies existing master data in place. |
-| 🟡 **WRITE · links/unlinks** | 4 | `false` | `false` | Assigns/unassigns receipt ↔ transaction. Reversible. |
-| 🟡 **WRITE · reverts state** | 4 | `false` | `false` | Un-confirms postings / restores receipts. Reversible. |
-| 🔴 **DESTRUCTIVE · deletes** | 2 | `false` | `true` | Deletes a record. Confirm first. |
+| 🟢 **READ-ONLY** | 15 | `true` | `false` | Ruft nur Daten ab. Ungefährlich. |
+| 🟡 **WRITE · legt Daten an** | 24 | `false` | `false` | Erzeugt Datensätze (nicht idempotent — mehrfach aufgerufen entstehen Duplikate). |
+| 🟡 **WRITE · ändert Daten** | 4 | `false` | `false` | Ändert bestehende Stammdaten direkt. |
+| 🟡 **WRITE · verknüpft/löst** | 4 | `false` | `false` | Ordnet Beleg ↔ Transaktion zu bzw. hebt die Zuordnung auf. Umkehrbar. |
+| 🟡 **WRITE · nimmt Zustand zurück** | 4 | `false` | `false` | Setzt Buchungen auf unbestätigt / stellt Belege wieder her. Umkehrbar. |
+| 🔴 **DESTRUCTIVE · löscht** | 3 | `false` | `true` | Löscht oder storniert einen Datensatz. Vorher bestätigen lassen. |
 
-Hosts that respect annotations (Claude included) can require confirmation for
-`destructiveHint` tools and trust `readOnlyHint` tools automatically.
+Hosts, die Annotationen respektieren (Claude gehört dazu), können für
+`destructiveHint`-Tools eine Bestätigung verlangen und `readOnlyHint`-Tools automatisch
+vertrauen.
 
-> Run `npm run list-tools` (no credentials needed) to print the full catalog at any time.
+> Mit `npm run list-tools` (ohne Zugangsdaten) lässt sich der vollständige Katalog
+> jederzeit ausgeben.
 
 <details>
-<summary><strong>🟢 READ-ONLY (12)</strong></summary>
+<summary><strong>🟢 READ-ONLY (15)</strong></summary>
 
-| Tool | Endpoint |
+| Tool | Endpunkt |
 |---|---|
 | `accounts_get` | `POST /accounts/get` |
 | `cost_locations_get` | `POST /cost-locations/get` |
@@ -205,6 +213,9 @@ Hosts that respect annotations (Claude included) can require confirmation for
 | `receipts_get` | `POST /receipts/get` |
 | `receipts_get_id_by_customer` | `POST /receipts/get/id_by_customer` |
 | `receipts_assigned_transactions_get` | `POST /receipts/assigned-transactions/get` |
+| `reports_get_bwa` | `POST /reports/get/bwa` |
+| `reports_get_sums` | `POST /reports/get/sums` |
+| `reports_get_sums_ledger` | `POST /reports/get/sums/ledger` |
 | `transactions_get` | `POST /transactions/get` |
 | `transactions_get_id_by_customer` | `POST /transactions/get/id_by_customer` |
 | `transactions_assigned_receipts_get` | `POST /transactions/assigned-receipts/get` |
@@ -214,9 +225,9 @@ Hosts that respect annotations (Claude included) can require confirmation for
 </details>
 
 <details>
-<summary><strong>🟡 WRITE · creates data (22)</strong></summary>
+<summary><strong>🟡 WRITE · legt Daten an (24)</strong></summary>
 
-| Tool | Endpoint |
+| Tool | Endpunkt |
 |---|---|
 | `accounts_add` | `POST /accounts/add` |
 | `comments_add` | `POST /comments/add` |
@@ -233,6 +244,8 @@ Hosts that respect annotations (Claude included) can require confirmation for
 | `receipts_add` | `POST /receipts/add` |
 | `receipts_addBatch` | `POST /receipts/addBatch` |
 | `receipts_upload` | `POST /receipts/upload` |
+| `reports_create_bwa` | `POST /reports/create/bwa` |
+| `reports_create_sums` | `POST /reports/create/sums` |
 | `settings_add_creditor` | `POST /settings/add/creditor` |
 | `settings_add_debtor` | `POST /settings/add/debtor` |
 | `settings_add_postingaccount` | `POST /settings/add/postingaccount` |
@@ -243,62 +256,64 @@ Hosts that respect annotations (Claude included) can require confirmation for
 </details>
 
 <details>
-<summary><strong>🟡 WRITE · updates (4) · links (4) · reverts (4)</strong></summary>
+<summary><strong>🟡 WRITE · ändert (4) · verknüpft (4) · nimmt zurück (4)</strong></summary>
 
-| Tool | Endpoint | Sub-category |
+| Tool | Endpunkt | Unterkategorie |
 |---|---|---|
-| `cost_locations_update` | `POST /cost-locations/update` | update |
-| `settings_update_creditor` | `POST /settings/update/creditor` | update |
-| `settings_update_debtor` | `POST /settings/update/debtor` | update |
-| `settings_update_postingaccount` | `POST /settings/update/postingaccount` | update |
-| `transactions_assign_receipt` | `POST /transactions/assign/receipt` | link |
-| `transactions_assign_batch_receipt` | `POST /transactions/assign-batch/receipt` | link |
-| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | link |
-| `postings_assign_receipt_to_free_posting` | `POST /postings/assign/receipt-to-free-posting` | link |
-| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | revert |
-| `postings_unconfirm_receipt` | `POST /postings/unconfirm/receipt` | revert |
-| `postings_unconfirm_transaction` | `POST /postings/unconfirm/transaction` | revert |
-| `receipts_restore_id_by_customer` | `POST /receipts/restore/id_by_customer` | revert |
+| `cost_locations_update` | `POST /cost-locations/update` | ändert |
+| `settings_update_creditor` | `POST /settings/update/creditor` | ändert |
+| `settings_update_debtor` | `POST /settings/update/debtor` | ändert |
+| `settings_update_postingaccount` | `POST /settings/update/postingaccount` | ändert |
+| `transactions_assign_receipt` | `POST /transactions/assign/receipt` | verknüpft |
+| `transactions_assign_batch_receipt` | `POST /transactions/assign-batch/receipt` | verknüpft |
+| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | verknüpft |
+| `postings_assign_receipt_to_free_posting` | `POST /postings/assign/receipt-to-free-posting` | verknüpft |
+| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | nimmt zurück |
+| `postings_unconfirm_receipt` | `POST /postings/unconfirm/receipt` | nimmt zurück |
+| `postings_unconfirm_transaction` | `POST /postings/unconfirm/transaction` | nimmt zurück |
+| `receipts_restore_id_by_customer` | `POST /receipts/restore/id_by_customer` | nimmt zurück |
 </details>
 
 <details>
-<summary><strong>🔴 DESTRUCTIVE · deletes (2)</strong></summary>
+<summary><strong>🔴 DESTRUCTIVE · löscht (3)</strong></summary>
 
-| Tool | Endpoint | Note |
+| Tool | Endpunkt | Hinweis |
 |---|---|---|
-| `receipts_delete_id_by_customer` | `POST /receipts/delete/id_by_customer` | Restorable via `receipts_restore_id_by_customer` |
-| `cost_locations_delete` | `POST /cost-locations/delete` | **Not** restorable |
+| `receipts_delete_id_by_customer` | `POST /receipts/delete/id_by_customer` | Wiederherstellbar über `receipts_restore_id_by_customer` |
+| `cost_locations_delete` | `POST /cost-locations/delete` | **Nicht** wiederherstellbar |
+| `postings_cancel` | `POST /postings/cancel` | Noch nicht festgeschriebene Buchungen werden gelöscht; festgeschriebene werden durch eine Stornobuchung ausgeglichen |
 </details>
 
-## Run from source (stdio, no Docker)
+## Aus dem Quellcode starten (stdio, ohne Docker)
 
-Prefer the classic stdio mode for Claude Desktop? Build it locally:
+Du bevorzugst den klassischen stdio-Modus für Claude Desktop? Dann lokal bauen:
 
 ```bash
 npm install
 npm run build
 ```
 
-Then point Claude Desktop at the compiled entrypoint in `claude_desktop_config.json`:
+Anschließend Claude Desktop in `claude_desktop_config.json` auf den kompilierten
+Einstiegspunkt zeigen lassen:
 
 ```json
 {
   "mcpServers": {
     "buchhaltungsbutler": {
       "command": "node",
-      "args": ["/ABSOLUTE/PATH/Buchhaltungsbutler MCP/dist/index.js"],
+      "args": ["/ABSOLUTER/PFAD/Buchhaltungsbutler MCP/dist/index.js"],
       "env": {
         "MCP_TRANSPORT": "stdio",
-        "BB_API_CLIENT": "your-api-client",
-        "BB_API_SECRET": "your-api-secret",
-        "BB_API_KEY": "your-customer-api-key"
+        "BB_API_CLIENT": "dein-api-client",
+        "BB_API_SECRET": "dein-api-secret",
+        "BB_API_KEY": "dein-kunden-api-key"
       }
     }
   }
 }
 ```
 
-Or run the container over stdio instead:
+Oder den Container stattdessen über stdio betreiben:
 
 ```json
 {
@@ -312,67 +327,78 @@ Or run the container over stdio instead:
         "buchhaltungsbutler-mcp:latest"
       ],
       "env": {
-        "BB_API_CLIENT": "your-api-client",
-        "BB_API_SECRET": "your-api-secret",
-        "BB_API_KEY": "your-customer-api-key"
+        "BB_API_CLIENT": "dein-api-client",
+        "BB_API_SECRET": "dein-api-secret",
+        "BB_API_KEY": "dein-kunden-api-key"
       }
     }
   }
 }
 ```
 
-(Build the image first: `docker build -t buchhaltungsbutler-mcp:latest .`)
+(Das Image vorher bauen: `docker build -t buchhaltungsbutler-mcp:latest .`)
 
-## Keeping the spec current
+## Spec aktuell halten
 
-The bundled `spec.json` is the official BuchhaltungsButler v1 OpenAPI spec — the
-source of truth for the tools. To refresh against a newer API version:
+Die mitgelieferte `spec.json` ist die offizielle BuchhaltungsButler-v1-OpenAPI-Spec — die
+maßgebliche Quelle für die Tools. So aktualisierst du sie auf einen neueren API-Stand:
 
 ```bash
 curl -s https://app.buchhaltungsbutler.de/docs/api/v1.de.json -o spec.json
 npm run build
 ```
 
-New paths are picked up automatically; add them to `PATH_CATEGORY` in
-`src/categories.ts` so they get the correct safety category (unmapped paths fall back
-to the safe-but-conservative *create* category).
+Neue Pfade werden automatisch übernommen; trage sie in `PATH_CATEGORY` in
+`src/categories.ts` ein, damit sie die richtige Sicherheitskategorie bekommen (nicht
+zugeordnete Pfade fallen konservativ auf die Kategorie *create* zurück).
 
-## Development
+> **Hinweis zur Versionsnummer:** BuchhaltungsButler pflegt das Feld `info.version` in
+> der Spec nicht zuverlässig — der Inhalt kann sich ändern, ohne dass die Nummer steigt.
+> Verlass dich beim Abgleich also nicht auf die Version, sondern vergleiche die
+> Pfadliste (`paths`) und die Parameter der Endpunkte.
+
+## Entwicklung
 
 ```bash
 npm install
-npm run build      # compile TypeScript → dist/
-npm test           # run the Vitest suite
-npm run list-tools # print the categorized tool catalog (no credentials needed)
+npm run build      # TypeScript → dist/ kompilieren
+npm test           # Vitest-Suite ausführen
+npm run list-tools # kategorisierten Tool-Katalog ausgeben (ohne Zugangsdaten)
 ```
 
-CI builds and tests every push across Node 20 and 22; pushes to `main` also publish a
-Docker image to the GitHub Container Registry.
+Die CI baut und testet jeden Push unter Node 20 und 22; Pushes auf `main` veröffentlichen
+zusätzlich ein Docker-Image in der GitHub Container Registry.
 
-## Notes & conventions
+## Hinweise & Konventionen
 
-- **Dates**: `YYYY-MM-DD`. **Amounts**: dot decimal separator (e.g. `-12.30`).
-- **File uploads** (`receipts_upload`, `receipts_add`, `receipts_addBatch`): pass the
-  file as a base64 string in the `file` field.
-- **Paging**: most `get` tools accept `limit` and `offset`.
-- **Batch tools** take arrays of objects; item schemas are resolved from the spec
-  definitions and shown to the model.
-- **Rate limit**: BuchhaltungsButler allows 100 requests/customer/minute; the server
-  self-throttles at `BB_RATE_LIMIT` (default 90) to stay safely under it.
+- **Datumsangaben**: `YYYY-MM-DD`. **Beträge**: Punkt als Dezimaltrennzeichen (z. B. `-12.30`).
+- **Datei-Uploads** (`receipts_upload`, `receipts_add`, `receipts_addBatch`): Die Datei
+  wird als Base64-Zeichenkette im Feld `file` übergeben.
+- **Blättern**: Die meisten `get`-Tools akzeptieren `limit` und `offset`.
+- **Batch-Tools** erwarten Arrays von Objekten; die Item-Schemata werden aus den
+  Spec-Definitionen aufgelöst und dem Modell mitgegeben.
+- **Auswertungen** (BWA, Summen- und Saldenliste) werden asynchron im Hintergrund
+  erzeugt: erst `reports_create_*` aufrufen, dann `reports_get_*` mit der zurückgegebenen
+  `id_by_customer`. Eine neue Auswertung desselben Typs ersetzt die vorherige.
+- **Rate-Limit**: BuchhaltungsButler erlaubt 100 Anfragen/Kunde/Minute; der Server
+  drosselt sich selbst bei `BB_RATE_LIMIT` (Standard 90), um sicher darunter zu bleiben.
 
-## Security
+## Sicherheit
 
-- Your API credentials live only in `.env`, which is git-ignored. **Never commit real
-  secrets.** If any leak, rotate them in **BuchhaltungsButler → Settings → API**.
-- The HTTP endpoint is unauthenticated by default (fine on localhost). To expose it
-  beyond your machine, set `MCP_AUTH_TOKEN` and send it as an
-  `Authorization: Bearer <token>` header — ideally behind TLS.
+- Deine API-Zugangsdaten liegen ausschließlich in `.env`, und diese Datei ist von Git
+  ausgeschlossen. **Committe niemals echte Geheimnisse.** Falls doch etwas abfließt,
+  rotiere die Daten unter **BuchhaltungsButler → Einstellungen → API**.
+- Der HTTP-Endpunkt ist standardmäßig nicht authentifiziert (auf localhost unbedenklich).
+  Um ihn über deinen Rechner hinaus verfügbar zu machen, setze `MCP_AUTH_TOKEN` und
+  sende ihn als `Authorization: Bearer <Token>`-Header — idealerweise hinter TLS.
 
-See [SECURITY.md](./SECURITY.md) for the full policy and how to report a vulnerability.
+Die vollständige Richtlinie und den Meldeweg für Sicherheitslücken findest du in
+[SECURITY.md](./SECURITY.md).
 
-## Credits & license
+## Credits & Lizenz
 
-An unofficial community integration for [BuchhaltungsButler](https://www.buchhaltungsbutler.de/);
-not affiliated with or endorsed by BuchhaltungsButler. Built on the
-[Model Context Protocol](https://modelcontextprotocol.io). Licensed under the
-[MIT License](./LICENSE.md).
+Eine inoffizielle Community-Integration für
+[BuchhaltungsButler](https://www.buchhaltungsbutler.de/); weder mit BuchhaltungsButler
+verbunden noch von dort unterstützt. Basiert auf dem
+[Model Context Protocol](https://modelcontextprotocol.io). Veröffentlicht unter der
+[MIT-Lizenz](./LICENSE.md).
