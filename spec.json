@@ -88,10 +88,15 @@
               "properties": {
                 "field": {
                   "type": "string",
-                  "enum": ["ASC", "DESC"]
+                  "enum": [
+                    "ASC",
+                    "DESC"
+                  ]
                 }
               },
-              "required": ["field"]
+              "required": [
+                "field"
+              ]
             },
             "required": false
           },
@@ -122,6 +127,13 @@
             "in": "body",
             "name": "due_date",
             "description": "The receipt's issuing due date in format 'YYYY-MM-DD' (e.g. '2017-04-26'). All receipts with the same due date given value will be returned. <br/><br/>If specified, the field will be validated. An empty string is not considered a valid due date.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_since_last_modified",
+            "description": "A date and time in format 'YYYY-MM-DD HH:MM:SS' (e.g. '2017-04-26 13:45:00'). If only 'YYYY-MM-DD' is specified, the time defaults to '23:59:59'. All receipts whose date_updated value is later than the specified value will be returned.<br/><br/>If specified, the field will be validated. An empty string is not considered a valid date.",
             "required": false,
             "type": "string"
           }
@@ -227,6 +239,12 @@
             "description": "invalid due_date specified",
             "schema": {
               "$ref": "#/definitions/ReceiptsGet_ErrorCode18"
+            }
+          },
+          "400 (19)": {
+            "description": "invalid date_since_last_modified specified",
+            "schema": {
+              "$ref": "#/definitions/ReceiptsGet_ErrorCode19"
             }
           },
           "500 (0)": {
@@ -618,13 +636,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "400 (5)": {
@@ -654,7 +672,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -1303,6 +1321,13 @@
           },
           {
             "in": "body",
+            "name": "date_since_last_modified",
+            "description": "A date and time in format 'YYYY-MM-DD HH:MM:SS' (e.g. '2017-04-26 13:45:00'). If only 'YYYY-MM-DD' is specified, the time defaults to '23:59:59'. All transactions whose date_updated value is later than the specified value will be returned.<br/><br/>If specified, the field will be validated. An empty string is not considered a valid date.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "in": "body",
             "name": "account",
             "description": "The account number of the account the transaction is stored to.<br/><br/>If specified, the field will be validated.",
             "required": false,
@@ -1403,6 +1428,12 @@
             "description": "invalid id_by_customer_to specified",
             "schema": {
               "$ref": "#/definitions/TransactionsGet_ErrorCode13"
+            }
+          },
+          "400 (14)": {
+            "description": "invalid date_since_last_modified specified",
+            "schema": {
+              "$ref": "#/definitions/TransactionsGet_ErrorCode14"
             }
           },
           "500 (0)": {
@@ -1791,13 +1822,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "400 (5)": {
@@ -1821,7 +1852,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -2080,13 +2111,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "400 (10)": {
@@ -2122,7 +2153,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -2456,6 +2487,14 @@
             "description": "The payment reference id.<br /><br />If specified correctly, the resulting receipt of the created invoice will match with the corresponding transaction. <br /><br />NOTE: Currently we support Amazon order id, PayPal transaction id and Stripe transaction id!",
             "required": false,
             "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "language",
+            "description": "The language for translatable invoice labels (e.g. headings, table headers, payment terms). Can be either 'de_DE' (<i>&ldquo;Deutsch&rdquo;</i>, default) or 'en_US' (<i>&ldquo;English&rdquo;</i>).<br/><br/>If omitted, German is used.",
+            "required": false,
+            "type": "string",
+            "default": "de_DE"
           }
         ],
         "responses": {
@@ -2667,6 +2706,12 @@
             "description": "invalid due_days specified",
             "schema": {
               "$ref": "#/definitions/InvoicesCreate_ErrorCode43"
+            }
+          },
+          "400 (44)": {
+            "description": "invalid language specified",
+            "schema": {
+              "$ref": "#/definitions/InvoicesCreate_ErrorCode44"
             }
           },
           "500 (0)": {
@@ -2932,6 +2977,14 @@
             "description": "The payment reference id.<br /><br />If specified correctly, the resulting receipt of the created invoice will match with the corresponding transaction.  <br /><br />NOTE: Currently we support Amazon order id, PayPal transaction id and Stripe transaction id!",
             "required": false,
             "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "language",
+            "description": "The language for translatable invoice labels (e.g. headings, table headers, payment terms). Can be either 'de_DE' (<i>&ldquo;Deutsch&rdquo;</i>, default) or 'en_US' (<i>&ldquo;English&rdquo;</i>).<br/><br/>If omitted, German is used.",
+            "required": false,
+            "type": "string",
+            "default": "de_DE"
           }
         ],
         "responses": {
@@ -3163,6 +3216,12 @@
               "$ref": "#/definitions/InvoicesCreateEInvoice_ErrorCode43"
             }
           },
+          "400 (44)": {
+            "description": "invalid language specified",
+            "schema": {
+              "$ref": "#/definitions/InvoicesCreateEInvoice_ErrorCode44"
+            }
+          },
           "500 (0)": {
             "description": "internal error",
             "schema": {
@@ -3390,6 +3449,14 @@
             "description": "The customer number of the recipient.<br/>If specified, the field will be validated.",
             "required": false,
             "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "language",
+            "description": "The language for translatable invoice labels (e.g. headings, table headers, payment terms). Can be either 'de_DE' (<i>&ldquo;Deutsch&rdquo;</i>, default) or 'en_US' (<i>&ldquo;English&rdquo;</i>).<br/><br/>If omitted, German is used.",
+            "required": false,
+            "type": "string",
+            "default": "de_DE"
           }
         ],
         "responses": {
@@ -3559,6 +3626,12 @@
             "description": "invalid customer_number specified",
             "schema": {
               "$ref": "#/definitions/InvoicesCreateDraft_ErrorCode38"
+            }
+          },
+          "400 (44)": {
+            "description": "invalid language specified",
+            "schema": {
+              "$ref": "#/definitions/InvoicesCreateDraft_ErrorCode44"
             }
           },
           "500 (0)": {
@@ -3814,7 +3887,7 @@
           {
             "in": "body",
             "name": "vats",
-            "description": "An array of vats.<br/><br/>Usage:<br/>\"vats\" : ['vat of posting 1', 'vat of posting 2'].<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
+            "description": "An array of vats.<br/><br/>Usage:<br/>\"vats\" : ['vat of posting 1', 'vat of posting 2'].<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_506 ('§13b 19% USt./VSt. (EU §13b Abs. 1)')<br />- 19_both_6506 ('§13b 19% USt. (EU §13b Abs. 1, ohne VSt.)')<br />- 19_both_511 ('§13b 19% USt./VSt. (Drittland §13b Abs. 2 Nr. 1)')<br />- 19_both_6511 ('§13b 19% USt. (Drittland §13b Abs. 2 Nr. 1, ohne VSt.)')<br />- 19_both_6501 ('§13b 19/16% USt. (ohne VSt.)')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_506 ('§13b 19/16% USt./Aufz. VSt. (EU §13b Abs. 1)') <br />- 19_both_app_511 ('§13b 19/16% USt./Aufz. VSt. (Drittland §13b Abs. 2 Nr. 1)') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
             "required": true,
             "type": "array"
           },
@@ -4157,13 +4230,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "403 (11)": {
@@ -4181,7 +4254,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -4232,7 +4305,7 @@
           {
             "in": "body",
             "name": "vats",
-            "description": "An array of vats.<br/><br/>Usage:<br/>\"vats\" : ['vat of posting 1', 'vat of posting 2'].<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
+            "description": "An array of vats.<br/><br/>Usage:<br/>\"vats\" : ['vat of posting 1', 'vat of posting 2'].<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_506 ('§13b 19% USt./VSt. (EU §13b Abs. 1)')<br />- 19_both_6506 ('§13b 19% USt. (EU §13b Abs. 1, ohne VSt.)')<br />- 19_both_511 ('§13b 19% USt./VSt. (Drittland §13b Abs. 2 Nr. 1)')<br />- 19_both_6511 ('§13b 19% USt. (Drittland §13b Abs. 2 Nr. 1, ohne VSt.)')<br />- 19_both_6501 ('§13b 19/16% USt. (ohne VSt.)')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_506 ('§13b 19/16% USt./Aufz. VSt. (EU §13b Abs. 1)') <br />- 19_both_app_511 ('§13b 19/16% USt./Aufz. VSt. (Drittland §13b Abs. 2 Nr. 1)') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
             "required": true,
             "type": "array"
           },
@@ -4496,13 +4569,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "403 (11)": {
@@ -4520,7 +4593,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -4585,7 +4658,7 @@
           {
             "in": "body",
             "name": "vat",
-            "description": "The vat rate of the posting.<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
+            "description": "The vat rate of the posting.<br /><br />Possible vats:<br />- 0_none ('keine Ust.')<br />- 19_vat ('19% Ust.')<br />- 7_vat ('7% Ust.')<br />- 19_pre ('19% Vst.')<br />- 7_pre ('7% Vst.')<br />- 19_both_1 ('§13b 19% USt./VSt.')<br />- 19_both_506 ('§13b 19% USt./VSt. (EU §13b Abs. 1)')<br />- 19_both_6506 ('§13b 19% USt. (EU §13b Abs. 1, ohne VSt.)')<br />- 19_both_511 ('§13b 19% USt./VSt. (Drittland §13b Abs. 2 Nr. 1)')<br />- 19_both_6511 ('§13b 19% USt. (Drittland §13b Abs. 2 Nr. 1, ohne VSt.)')<br />- 19_both_6501 ('§13b 19/16% USt. (ohne VSt.)')<br />- 19_both_2 ('I.g.E. 19% USt./VSt.')<br />- 7_both ('I.g.E. 7% USt./VSt.')<br />- 19_both_1_no_pre ('§13b 19/16% USt.')<br />- 19_both_2_no_pre ('i.g.E. 19/16% USt.')<br />- 7_both_no_pre ('i.g.E. 7/5% USt.')<br />- 19_pre_app ('19/16% Aufz. VSt.')<br />- 7_pre_app ('7/5% Aufz. VSt.') <br />- 19_both_app_1 ('§13b 19/16% USt./Aufz. VSt.') <br />- 19_both_app_506 ('§13b 19/16% USt./Aufz. VSt. (EU §13b Abs. 1)') <br />- 19_both_app_511 ('§13b 19/16% USt./Aufz. VSt. (Drittland §13b Abs. 2 Nr. 1)') <br />- 19_both_app_2 ('i.g.E. 19/16% USt./Aufz. VSt.')  <br />- 7_both_app ('i.g.E. 7/5% USt./Aufz. VSt.')",
             "required": true,
             "type": "string"
           },
@@ -4853,13 +4926,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "403 (11)": {
@@ -4877,7 +4950,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -5298,6 +5371,105 @@
         }
       }
     },
+    "/postings/cancel": {
+      "post": {
+        "tags": [
+          "Postings"
+        ],
+        "summary": "cancel posting",
+        "description": "Cancel a specified posting. Postings that are not fixed are deleted, fixed postings are cancelled by creating a reversal posting.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "posting_id_by_customer",
+            "description": "The id_by_customer of the posting.",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "cancellation successful",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode11"
+            }
+          },
+          "400 (5)": {
+            "description": "parameter posting_id_by_customer is required",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode5"
+            }
+          },
+          "400 (6)": {
+            "description": "parameter posting_id_by_customer must be an integer",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode6"
+            }
+          },
+          "400 (7)": {
+            "description": "posting not found",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode7"
+            }
+          },
+          "400 (8)": {
+            "description": "posting cannot be cancelled",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode8"
+            }
+          },
+          "400 (9)": {
+            "description": "posting could not be cancelled",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode9"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/PostingsCancel_ErrorCode30"
+            }
+          }
+        }
+      }
+    },
     "/settings/add/debtor": {
       "post": {
         "tags": [
@@ -5570,13 +5742,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "403 (11)": {
@@ -5594,7 +5766,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -5878,13 +6050,13 @@
           "401 (3)": {
             "description": "API credentials unknown or invalid",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode3"
+              "$ref": "#/definitions/Request_ErrorCode3"
             }
           },
           "401 (4)": {
             "description": "customer not found or insufficient privileges",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode4"
+              "$ref": "#/definitions/Request_ErrorCode4"
             }
           },
           "403 (11)": {
@@ -5902,7 +6074,7 @@
           "500 (0)": {
             "description": "internal error",
             "schema": {
-              "$ref":  "#/definitions/Request_ErrorCode0"
+              "$ref": "#/definitions/Request_ErrorCode0"
             }
           },
           "504 (30)": {
@@ -5950,7 +6122,6 @@
             "required": true,
             "type": "integer"
           }
-
         ],
         "responses": {
           "200": {
@@ -6889,7 +7060,6 @@
             "required": true,
             "type": "integer"
           }
-
         ],
         "responses": {
           "200": {
@@ -7688,6 +7858,573 @@
           }
         }
       }
+    },
+    "/reports/create/bwa": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "create bwa report",
+        "description": "Triggers the creation of a BWA report (<i>&ldquo;Betriebswirtschaftliche Auswertung&rdquo;</i>).<br/><br/>The report is generated asynchronously in the background. The response contains the id_by_customer of the created report, which may be used to retrieve it once the generation has been finished.<br/><br/>A new report may only be requested once the generation of a previously requested report of the same type has been finished.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_from",
+            "description": "The first day of the period the report is created for, in format 'YYYY-MM-DD' (e.g. '2026-01-01').",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_to",
+            "description": "The last day of the period the report is created for, in format 'YYYY-MM-DD' (e.g. '2026-03-31').",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "query successful",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateBwa_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode11"
+            }
+          },
+          "400 (6)": {
+            "description": "invalid date_from specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateBwa_ErrorCode6"
+            }
+          },
+          "400 (7)": {
+            "description": "invalid date_to specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateBwa_ErrorCode7"
+            }
+          },
+          "400 (12)": {
+            "description": "report generation already in progress",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateBwa_ErrorCode12"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode30"
+            }
+          }
+        }
+      }
+    },
+    "/reports/create/sums": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "create sums report",
+        "description": "Triggers the creation of a sums report (<i>&ldquo;Summen- und Saldenliste&rdquo;</i>). The report is always created for all of the customer's postingaccounts.<br/><br/>The report is generated asynchronously in the background. The response contains the id_by_customer of the created report, which may be used to retrieve it once the generation has been finished.<br/><br/>A new report may only be requested once the generation of a previously requested report of the same type has been finished.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_from",
+            "description": "The first day of the period the report is created for, in format 'YYYY-MM-DD' (e.g. '2026-01-01').",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_to",
+            "description": "The last day of the period the report is created for, in format 'YYYY-MM-DD' (e.g. '2026-03-31').",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "base",
+            "description": "The date the postings are taken into account by. Can be either 'date' (<i>&ldquo;Buchungsdatum&rdquo;</i>) or 'date_delivery_else_date' (&ldquo;Buchungs- und Leistungsdatum&rdquo;).<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "string",
+            "default": "date"
+          },
+          {
+            "in": "body",
+            "name": "file_pdf",
+            "description": "If true, a pdf file will be created for the report additionally.<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "in": "body",
+            "name": "file_csv",
+            "description": "If true, a csv file will be created for the report additionally.<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "boolean",
+            "default": "false"
+          },
+          {
+            "in": "body",
+            "name": "archive_export",
+            "description": "If true, a zip archive containing the csv file and the postingaccount ledgers (<i>&ldquo;Kontenbl&auml;tter&rdquo;</i>) will be created for the report additionally.<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "boolean",
+            "default": "false"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "query successful",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode11"
+            }
+          },
+          "400 (6)": {
+            "description": "invalid date_from specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode6"
+            }
+          },
+          "400 (7)": {
+            "description": "invalid date_to specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode7"
+            }
+          },
+          "400 (8)": {
+            "description": "invalid base specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode8"
+            }
+          },
+          "400 (9)": {
+            "description": "invalid file_pdf specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode9"
+            }
+          },
+          "400 (10)": {
+            "description": "invalid file_csv specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode10"
+            }
+          },
+          "400 (12)": {
+            "description": "report generation already in progress",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode12"
+            }
+          },
+          "400 (13)": {
+            "description": "invalid archive_export specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsCreateSums_ErrorCode13"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode30"
+            }
+          }
+        }
+      }
+    },
+    "/reports/get/bwa": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "get bwa report",
+        "description": "Returns a previously created BWA report (<i>&ldquo;Betriebswirtschaftliche Auswertung&rdquo;</i>).<br/><br/>Reports are generated asynchronously, so a report is only available once its generation has been finished. Note that creating a new report of the same type replaces the previously created one.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "report_id_by_customer",
+            "description": "The id_by_customer of the report, as returned when the report was created",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "get_files",
+            "description": "If true, the report's files will be included as base64 encoded strings.<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "boolean",
+            "default": "false"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "query successful",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetBwa_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode11"
+            }
+          },
+          "400 (6)": {
+            "description": "invalid report_id_by_customer specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetBwa_ErrorCode6"
+            }
+          },
+          "400 (7)": {
+            "description": "report was not found",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetBwa_ErrorCode7"
+            }
+          },
+          "400 (8)": {
+            "description": "report generation has not been finished yet",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetBwa_ErrorCode8"
+            }
+          },
+          "400 (9)": {
+            "description": "invalid get_files specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetBwa_ErrorCode9"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode30"
+            }
+          }
+        }
+      }
+    },
+    "/reports/get/sums": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "get sums report",
+        "description": "Returns a previously created sums report (<i>&ldquo;Summen- und Saldenliste&rdquo;</i>).<br/><br/>Reports are generated asynchronously, so a report is only available once its generation has been finished. Note that creating a new report of the same type replaces the previously created one.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "report_id_by_customer",
+            "description": "The id_by_customer of the report, as returned when the report was created",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "get_files",
+            "description": "If true, the report's files will be included as base64 encoded strings.<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "boolean",
+            "default": "false"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "query successful",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSums_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode11"
+            }
+          },
+          "400 (6)": {
+            "description": "invalid report_id_by_customer specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSums_ErrorCode6"
+            }
+          },
+          "400 (7)": {
+            "description": "report was not found",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSums_ErrorCode7"
+            }
+          },
+          "400 (8)": {
+            "description": "report generation has not been finished yet",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSums_ErrorCode8"
+            }
+          },
+          "400 (9)": {
+            "description": "invalid get_files specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSums_ErrorCode9"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode30"
+            }
+          }
+        }
+      }
+    },
+    "/reports/get/sums/ledger": {
+      "post": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "get sums report postingaccount ledger",
+        "description": "Returns the postingaccount ledger (<i>&ldquo;Kontenblatt&rdquo;</i>) of one postingaccount, holding its postings of the requested period.<br/><br/>The postingaccount numbers available for a sums report are provided by reports/get/sums, both as the keys of the 'sums' object and as its entries' 'postingaccount_number'.<br/><br/>In contrast to the report itself the ledger is created on the fly, so no report has to be created beforehand. Note that retrieving the ledger of a postingaccount holding a lot of postings may take a while.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "api_key",
+            "description": "The api key registered for the customer to manage",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "postingaccount_number",
+            "description": "The number of the postingaccount to return the ledger for",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "date_from",
+            "description": "The first day of the period the ledger is returned for, in format 'YYYY-MM-DD' (e.g. '2026-01-01').",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "date_to",
+            "description": "The last day of the period the ledger is returned for, in format 'YYYY-MM-DD' (e.g. '2026-03-31').",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "base",
+            "description": "The date the postings are taken into account by. Can be either 'date' (<i>&ldquo;Buchungsdatum&rdquo;</i>) or 'date_delivery_else_date' (&ldquo;Buchungs- und Leistungsdatum&rdquo;).<br/><br/>If specified, the field will be validated.",
+            "required": false,
+            "type": "string",
+            "default": "date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "query successful",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_Success"
+            }
+          },
+          "401 (3)": {
+            "description": "API credentials unknown or invalid",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode3"
+            }
+          },
+          "401 (4)": {
+            "description": "customer not found or insufficient privileges",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode4"
+            }
+          },
+          "403 (11)": {
+            "description": "customer has no active status",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode11"
+            }
+          },
+          "400 (10)": {
+            "description": "invalid postingaccount_number specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_ErrorCode10"
+            }
+          },
+          "400 (12)": {
+            "description": "invalid date_from specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_ErrorCode12"
+            }
+          },
+          "400 (13)": {
+            "description": "invalid date_to specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_ErrorCode13"
+            }
+          },
+          "400 (14)": {
+            "description": "invalid base specified",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_ErrorCode14"
+            }
+          },
+          "400 (16)": {
+            "description": "postingaccount was not found",
+            "schema": {
+              "$ref": "#/definitions/ReportsGetSumsLedger_ErrorCode16"
+            }
+          },
+          "400 (23)": {
+            "description": "no post and files content received or declined",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode23"
+            }
+          },
+          "500 (0)": {
+            "description": "internal error",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode0"
+            }
+          },
+          "504 (30)": {
+            "description": "timeout",
+            "schema": {
+              "$ref": "#/definitions/Request_ErrorCode30"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -7954,7 +8691,9 @@
         "currency": {
           "type": "string",
           "description": "The transaction currency.<br/><br/>Currently we support the following currencies: AED, AUD, BGN, BRL, CAD, CHF, CNY, COP, CYP, CZK, DKK, EUR, GBP, HKD, HRK, HUF, IDR, ILS, INR, ISK, JPY, KRW, LTL, LVL, MTL, MXN, MYR, NOK, NZD, PEN, PHP, PLN, QAR, ROL, RON, RSD, RUB, SEK, SGD, SIT, SKK, THB, TRL, TRY, UAH, USD, VND, ZAR<br/><br/>If specified, the field will be validated.<br>An empty string is not considered a valid type.",
-          "enum": ["EUR"]
+          "enum": [
+            "EUR"
+          ]
         },
         "vat_rate": {
           "type": "number",
@@ -7986,7 +8725,14 @@
           "description": "If set, both receipts will be assigned to a transaction if one of them is assigned manually."
         }
       },
-      "required": ["type", "counterparty", "invoice_number", "date", "amount", "currency"],
+      "required": [
+        "type",
+        "counterparty",
+        "invoice_number",
+        "date",
+        "amount",
+        "currency"
+      ],
       "example": {
         "type": "invoice inbound",
         "counterparty": "Test GmBh",
@@ -7994,7 +8740,7 @@
         "date": "2022-01-01",
         "amount": 123.99,
         "currency": "EUR",
-        "vat_rate": 19.00,
+        "vat_rate": 19.0,
         "account": 1200,
         "creditor_debtor": 70001,
         "date_delivery": "2022-01-01",
@@ -8512,6 +9258,29 @@
         }
       }
     },
+    "ReceiptsGet_ErrorCode19": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            19
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_since_last_modified specified"
+          ]
+        }
+      }
+    },
     "ReceiptsGet_ErrorCode30": {
       "type": "object",
       "properties": {
@@ -8643,7 +9412,9 @@
             "e_invoice_type": {
               "type": "string",
               "enum": [
-                "0", "1", "2"
+                "0",
+                "1",
+                "2"
               ]
             },
             "list_direction": {
@@ -8667,7 +9438,8 @@
             "file_type": {
               "type": "string",
               "enum": [
-                "pdf", "xml"
+                "pdf",
+                "xml"
               ]
             },
             "date_delivery": {
@@ -9451,7 +10223,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -11156,10 +11930,17 @@
         "currency": {
           "type": "string",
           "description": "The transaction currency.<br/><br/>Currently we support the following currencies: AED, AUD, BGN, BRL, CAD, CHF, CNY, COP, CYP, CZK, DKK, EUR, GBP, HKD, HRK, HUF, IDR, ILS, INR, ISK, JPY, KRW, LTL, LVL, MTL, MXN, MYR, NOK, NZD, PEN, PHP, PLN, QAR, ROL, RON, RSD, RUB, SEK, SGD, SIT, SKK, THB, TRL, TRY, UAH, USD, VND, ZAR<br/><br/>If specified, the field will be validated.<br>An empty string is not considered a valid type.",
-          "enum": ["EUR"]
+          "enum": [
+            "EUR"
+          ]
         }
       },
-      "required": ["account", "to_from", "amount", "booking_date"],
+      "required": [
+        "account",
+        "to_from",
+        "amount",
+        "booking_date"
+      ],
       "example": {
         "account": 1200,
         "to_from": "Name of payer/payee",
@@ -11169,7 +11950,7 @@
         "account_number": "DE1234567890",
         "bank_code": "DEUTDEFFXXX",
         "bank_name": "Deutsche Bank AG",
-        "purpose":"",
+        "purpose": "",
         "type": "direct debit",
         "booking_text": "booking text",
         "payment_reference": "rn_123",
@@ -11194,7 +11975,10 @@
           "description": "id_by_customer of the transaction."
         }
       },
-      "required": ["receipt_id_by_customer", "transaction_id_by_customer"],
+      "required": [
+        "receipt_id_by_customer",
+        "transaction_id_by_customer"
+      ],
       "example": {
         "transaction_id_by_customer": 1,
         "receipt_id_by_customer": 1
@@ -11543,6 +12327,29 @@
           "type": "string",
           "enum": [
             "invalid id_by_customer_to specified"
+          ]
+        }
+      }
+    },
+    "TransactionsGet_ErrorCode14": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            14
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_since_last_modified specified"
           ]
         }
       }
@@ -12449,7 +13256,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -12954,7 +13763,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -14049,6 +14860,29 @@
         }
       }
     },
+    "InvoicesCreate_ErrorCode44": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            44
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid language specified, allowed values: de_DE, en_US"
+          ]
+        }
+      }
+    },
     "InvoicesCreateEInvoice_Success": {
       "type": "object",
       "properties": {
@@ -14986,6 +15820,29 @@
         }
       }
     },
+    "InvoicesCreateEInvoice_ErrorCode44": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            44
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid language specified, allowed values: de_DE, en_US"
+          ]
+        }
+      }
+    },
     "InvoicesCreateDraft_Success": {
       "type": "object",
       "properties": {
@@ -15695,6 +16552,29 @@
         }
       }
     },
+    "InvoicesCreateDraft_ErrorCode44": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            44
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid language specified, allowed values: de_DE, en_US"
+          ]
+        }
+      }
+    },
     "PostingsGet_Success": {
       "type": "object",
       "properties": {
@@ -16342,7 +17222,14 @@
           "example": 10000
         }
       },
-      "required": ["receipt_id_by_customer", "postingaccounts", "vats", "amounts", "creditor", "debtor"]
+      "required": [
+        "receipt_id_by_customer",
+        "postingaccounts",
+        "vats",
+        "amounts",
+        "creditor",
+        "debtor"
+      ]
     },
     "PostingsAddReceipt_Success": {
       "type": "object",
@@ -17369,7 +18256,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -17468,7 +18357,14 @@
           }
         }
       },
-      "required": ["transaction_id_by_customer", "postingaccounts", "postingtexts", "vats", "amounts", "oi_receipts_ids_by_customer"]
+      "required": [
+        "transaction_id_by_customer",
+        "postingaccounts",
+        "postingtexts",
+        "vats",
+        "amounts",
+        "oi_receipts_ids_by_customer"
+      ]
     },
     "PostingsAddTransaction_Success": {
       "type": "object",
@@ -19035,7 +19931,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -19109,7 +20007,14 @@
             "example": "cost location two"
           }
         },
-        "required": ["date", "postingtext", "vat", "amounts", "postingaccount_debit", "postingaccount_credit"]
+        "required": [
+          "date",
+          "postingtext",
+          "vat",
+          "amounts",
+          "postingaccount_debit",
+          "postingaccount_credit"
+        ]
       }
     },
     "PostingsAddFree_Success": {
@@ -19930,7 +20835,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "message": {
                 "type": "string"
@@ -20239,6 +21146,278 @@
       }
     },
     "PostingsAssignReceiptToFreePosting_ErrorCode30": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            30
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "a timeout occurred while processing the request"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Success message",
+          "enum": [
+            ""
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode0": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            0
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "error while processing the request"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode3": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            3
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "API credentials unknown or invalid"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode4": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            4
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "customer not found or insufficient privileges"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode5": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            5
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "Parameter posting_id_by_customer is required."
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode6": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            6
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "Parameter posting_id_by_customer must be an integer."
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode7": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            7
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "Posting not found."
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode8": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            8
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "Posting cannot be cancelled."
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode9": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            9
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "Posting could not be cancelled."
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode11": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            11
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "customer has no active status"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode23": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            23
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "no post and files content received or declined"
+          ]
+        }
+      }
+    },
+    "PostingsCancel_ErrorCode30": {
       "type": "object",
       "properties": {
         "success": {
@@ -21178,7 +22357,7 @@
           "type": "string",
           "description": "The zip of your new debtor account.<br /><br />If specified, the field will be validated."
         },
-        "city":{
+        "city": {
           "type": "string",
           "description": "The city of your new debtor account.<br /><br />If specified, the field will be validated."
         },
@@ -21199,7 +22378,9 @@
           "description": "The bic of your new debtor account.<br /><br />If specified, the field will be validated."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     },
     "SettingsAddDebitor_Success": {
       "type": "object",
@@ -21704,7 +22885,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "postingaccount_number": {
                 "type": "string"
@@ -21776,7 +22959,7 @@
           "type": "string",
           "description": "The zip of your new creditor account.<br /><br />If specified, the field will be validated."
         },
-        "city":{
+        "city": {
           "type": "string",
           "description": "The city of your new creditor account.<br /><br />If specified, the field will be validated."
         },
@@ -21801,7 +22984,9 @@
           "description": "The due in days of your new creditor account.<br /><br />If specified, the field will be validated."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     },
     "SettingsAddCreditor_Success": {
       "type": "object",
@@ -22306,7 +23491,9 @@
             "properties": {
               "success": {
                 "type": "boolean",
-                "enum": [true]
+                "enum": [
+                  true
+                ]
               },
               "postingaccount_number": {
                 "type": "string"
@@ -26228,6 +27415,664 @@
           "type": "string",
           "enum": [
             "cost location may not be deleted"
+          ]
+        }
+      }
+    },
+    "ReportsCreateBwa_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "blank",
+          "enum": [
+            ""
+          ]
+        },
+        "id_by_customer": {
+          "type": "string",
+          "description": "The id_by_customer of the created report",
+          "enum": [
+            "123"
+          ]
+        }
+      }
+    },
+    "ReportsCreateBwa_ErrorCode6": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            6
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_from specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateBwa_ErrorCode7": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            7
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_to specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateBwa_ErrorCode12": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            12
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report generation already in progress"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "blank",
+          "enum": [
+            ""
+          ]
+        },
+        "id_by_customer": {
+          "type": "string",
+          "description": "The id_by_customer of the created report",
+          "enum": [
+            "123"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode6": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            6
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_from specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode7": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            7
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_to specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode8": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            8
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid base specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode9": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            9
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid file_pdf specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode10": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            10
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid file_csv specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode12": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            12
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report generation already in progress"
+          ]
+        }
+      }
+    },
+    "ReportsGetBwa_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "blank",
+          "enum": [
+            ""
+          ]
+        },
+        "report": {
+          "type": "object",
+          "description": "The report's data, containing the keys 'integrityError', 'standardChart', 'usedCostLocations', 'usedPostingaccountsNumbers', 'postingsRecordsCount', 'uncompletedPostingsCount', 'groups' and 'totals'.<br/><br/>The groups hold their classes, which in turn hold their postingaccounts. Every group, class, postingaccount and total provides its amount as the unformatted value 'amountsSum'."
+        },
+        "files": {
+          "type": "object",
+          "description": "Only contained if get_files has been specified. Provides the keys 'csv' and 'pdf', each holding the base64 encoded content of the report's file, or null if the file is not available &ndash; because it has not been requested when the report was created, because it is still being created or because it is not available anymore."
+        }
+      }
+    },
+    "ReportsGetBwa_ErrorCode6": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            6
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid report_id_by_customer specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetBwa_ErrorCode7": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            7
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report was not found"
+          ]
+        }
+      }
+    },
+    "ReportsGetBwa_ErrorCode8": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            8
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report generation has not been finished yet"
+          ]
+        }
+      }
+    },
+    "ReportsGetSums_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "blank",
+          "enum": [
+            ""
+          ]
+        },
+        "report": {
+          "type": "object",
+          "description": "The report's data, containing the keys 'integrityError', 'countPostingsWithDateVatEffectiveNotConsideredInReport' and 'sums'.<br/><br/>The sums are keyed by postingaccount number, and every entry provides the 'postingaccount' itself as well as the unformatted values 'balanceBeforeDebit', 'balanceBeforeCredit', 'balanceBeforeAbsolute', 'balanceBeforeSide', 'sumPeriodDebit', 'sumPeriodCredit', 'balanceAfterDebit', 'balanceAfterCredit', 'balanceAfterAbsolute' and 'balanceAfterSide'."
+        },
+        "files": {
+          "type": "object",
+          "description": "Only contained if get_files has been specified. Provides the keys 'csv', 'pdf' and 'csv_archive', each holding the base64 encoded content of the report's file, or null if the file is not available &ndash; because it has not been requested when the report was created, because it is still being created or because it is not available anymore."
+        }
+      }
+    },
+    "ReportsGetSums_ErrorCode6": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            6
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid report_id_by_customer specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSums_ErrorCode7": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            7
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report was not found"
+          ]
+        }
+      }
+    },
+    "ReportsGetSums_ErrorCode8": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            8
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "report generation has not been finished yet"
+          ]
+        }
+      }
+    },
+    "ReportsGetBwa_ErrorCode9": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            9
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid get_files specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSums_ErrorCode9": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            9
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid get_files specified"
+          ]
+        }
+      }
+    },
+    "ReportsCreateSums_ErrorCode13": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            13
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid archive_export specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSumsLedger_Success": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "Success boolean",
+          "enum": [
+            true
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "blank",
+          "enum": [
+            ""
+          ]
+        },
+        "report_sums_postingaccount_ledger": {
+          "type": "object",
+          "description": "The ledger's data, containing the keys 'integrityError', 'postingaccount_number' and 'postingaccountLedger'.<br/><br/>The 'postingaccount_number' is the number of the postingaccount the ledger has been returned for, whereas 'postingaccountLedger' is an array of the postingaccount's postings within the requested period, each one providing its date, posting text, counter postingaccount, amount, vat and the unformatted balance 'balanceAfterAbsolute' together with its side 'balanceAfterSide'. The array is empty if there are no postings in the requested period."
+        }
+      }
+    },
+    "ReportsGetSumsLedger_ErrorCode10": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            10
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid postingaccount_number specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSumsLedger_ErrorCode12": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            12
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_from specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSumsLedger_ErrorCode13": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            13
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid date_to specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSumsLedger_ErrorCode14": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            14
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "invalid base specified"
+          ]
+        }
+      }
+    },
+    "ReportsGetSumsLedger_ErrorCode16": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            false
+          ]
+        },
+        "error_code": {
+          "type": "integer",
+          "enum": [
+            16
+          ]
+        },
+        "message": {
+          "type": "string",
+          "enum": [
+            "postingaccount was not found"
           ]
         }
       }

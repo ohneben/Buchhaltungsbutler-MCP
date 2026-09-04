@@ -13,8 +13,8 @@ describe("specInfo", () => {
 });
 
 describe("buildToolDefs", () => {
-  it("generates exactly 48 tools", () => {
-    expect(tools).toHaveLength(48);
+  it("generates exactly 54 tools", () => {
+    expect(tools).toHaveLength(54);
   });
 
   it("gives every tool an MCP-valid name, and names are unique", () => {

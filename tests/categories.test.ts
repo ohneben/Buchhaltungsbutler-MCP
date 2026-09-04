@@ -6,8 +6,8 @@ import {
 } from "../src/categories.js";
 
 describe("PATH_CATEGORY", () => {
-  it("maps all 48 v1 endpoints", () => {
-    expect(Object.keys(PATH_CATEGORY)).toHaveLength(48);
+  it("maps all 54 v1 endpoints", () => {
+    expect(Object.keys(PATH_CATEGORY)).toHaveLength(54);
   });
 
   it("has the documented count per category", () => {
@@ -16,12 +16,12 @@ describe("PATH_CATEGORY", () => {
       counts[id] = (counts[id] ?? 0) + 1;
     }
     expect(counts).toEqual({
-      read: 12,
-      create: 22,
+      read: 15,
+      create: 24,
       update: 4,
       link: 4,
       revert: 4,
-      delete: 2,
+      delete: 3,
     });
   });
 

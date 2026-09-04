@@ -94,7 +94,7 @@ export const CATEGORIES: Record<CategoryId, CategoryMeta> = {
     id: "delete",
     banner: "🔴 DESTRUCTIVE · deletes data",
     blurb:
-      "Deletes a record. Confirm with the user before calling. Receipt deletes are restorable; cost-location deletes are not.",
+      "Deletes or cancels a record. Confirm with the user before calling. Receipt deletes are restorable; cost-location deletes are not. Cancelling a posting deletes it if it is not yet fixed, otherwise it books a reversal posting.",
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
@@ -105,7 +105,7 @@ export const CATEGORIES: Record<CategoryId, CategoryMeta> = {
 };
 
 /**
- * Explicit category for every path in the v1 spec (48 endpoints).
+ * Explicit category for every path in the v1 spec (54 endpoints).
  * Curated by hand rather than inferred, so categorization is exact.
  */
 export const PATH_CATEGORY: Record<string, CategoryId> = {
@@ -122,6 +122,9 @@ export const PATH_CATEGORY: Record<string, CategoryId> = {
   "/settings/get/creditors": "read",
   "/settings/get/debtors": "read",
   "/settings/get/postingaccounts": "read",
+  "/reports/get/bwa": "read",
+  "/reports/get/sums": "read",
+  "/reports/get/sums/ledger": "read",
 
   // ---- WRITE · create -----------------------------------------------------
   "/accounts/add": "create",
@@ -146,6 +149,8 @@ export const PATH_CATEGORY: Record<string, CategoryId> = {
   "/settings/add-batch/debtors": "create",
   "/transactions/add": "create",
   "/transactions/addBatch": "create",
+  "/reports/create/bwa": "create",
+  "/reports/create/sums": "create",
 
   // ---- WRITE · update -----------------------------------------------------
   "/cost-locations/update": "update",
@@ -168,6 +173,7 @@ export const PATH_CATEGORY: Record<string, CategoryId> = {
   // ---- DESTRUCTIVE · delete ----------------------------------------------
   "/cost-locations/delete": "delete",
   "/receipts/delete/id_by_customer": "delete",
+  "/postings/cancel": "delete",
 };
 
 export function categoryForPath(path: string): CategoryMeta {
