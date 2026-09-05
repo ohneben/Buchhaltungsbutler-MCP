@@ -58,15 +58,39 @@ class RateLimiter {
   }
 }
 
-export class BBClient {
-  private readonly auth: string;
-  private readonly limiter: RateLimiter;
+interface Resolved {
+  cfg: BBConfig;
+  auth: string;
+  limiter: RateLimiter;
+}
 
-  constructor(private readonly cfg: BBConfig) {
-    this.auth =
-      "Basic " +
-      Buffer.from(`${cfg.apiClient}:${cfg.apiSecret}`).toString("base64");
-    this.limiter = new RateLimiter(cfg.rateLimit);
+export class BBClient {
+  private resolved?: Resolved;
+
+  /**
+   * Takes a ready config, or a loader that runs on first use. Resolving
+   * lazily is deliberate: an MCP client must be able to connect and list
+   * tools before any credentials exist, so a missing variable has to surface
+   * as an error on the tool call that needs it, not kill the process at
+   * startup.
+   */
+  constructor(
+    private readonly source: BBConfig | (() => BBConfig) = loadConfig
+  ) {}
+
+  private ready(): Resolved {
+    if (!this.resolved) {
+      const cfg =
+        typeof this.source === "function" ? this.source() : this.source;
+      this.resolved = {
+        cfg,
+        auth:
+          "Basic " +
+          Buffer.from(`${cfg.apiClient}:${cfg.apiSecret}`).toString("base64"),
+        limiter: new RateLimiter(cfg.rateLimit),
+      };
+    }
+    return this.resolved;
   }
 
   /**
@@ -77,19 +101,20 @@ export class BBClient {
     path: string,
     args: Record<string, unknown>
   ): Promise<{ status: number; ok: boolean; body: unknown }> {
-    await this.limiter.take();
+    const { cfg, auth, limiter } = this.ready();
+    await limiter.take();
 
     const { api_key, ...rest } = args;
     const body = {
-      api_key: (api_key as string) || this.cfg.apiKey,
+      api_key: (api_key as string) || cfg.apiKey,
       ...rest,
     };
 
-    const url = `${this.cfg.baseUrl}${path}`;
+    const url = `${cfg.baseUrl}${path}`;
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: this.auth,
+        Authorization: auth,
         "Content-Type": "application/json",
         Accept: "application/json",
       },

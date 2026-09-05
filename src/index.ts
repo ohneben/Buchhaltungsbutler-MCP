@@ -11,12 +11,14 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express, { type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import { createServer } from "./server.js";
-import { BBClient, loadConfig } from "./client.js";
+import { BBClient } from "./client.js";
 
 const transport = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
 
 async function runStdio(): Promise<void> {
-  const client = new BBClient(loadConfig());
+  // No loadConfig() here: credentials are resolved on the first tool call, so
+  // the server still starts and lists its tools without them.
+  const client = new BBClient();
   const server = createServer(client);
   const t = new StdioServerTransport();
   await server.connect(t);
@@ -25,8 +27,7 @@ async function runStdio(): Promise<void> {
 }
 
 async function runHttp(): Promise<void> {
-  const cfg = loadConfig();
-  const client = new BBClient(cfg);
+  const client = new BBClient();
   const port = Number(process.env.PORT || "3000");
   const host = process.env.HOST || "0.0.0.0";
   const authToken = process.env.MCP_AUTH_TOKEN || "";
