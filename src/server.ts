@@ -3,6 +3,7 @@
  * JSON-Schema input + MCP annotations, and routes tool calls to the BB client.
  */
 
+import { createRequire } from "node:module";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -12,6 +13,24 @@ import {
 import { buildToolDefs, specInfo, type ToolDef } from "./spec.js";
 import { BBClient, type BBConfig } from "./client.js";
 
+const FALLBACK_VERSION = "0.0.0-dev";
+
+/**
+ * The version this server reports over MCP. It is read from package.json,
+ * which CI stamps from the release tag, so a release never has to be written
+ * down in a second place. Unreleased builds report FALLBACK_VERSION.
+ */
+function readPackageVersion(): string {
+  try {
+    const pkg = createRequire(import.meta.url)("../package.json") as {
+      version?: string;
+    };
+    return pkg.version ?? FALLBACK_VERSION;
+  } catch {
+    return FALLBACK_VERSION;
+  }
+}
+
 export function createServer(client: BBClient): Server {
   const info = specInfo();
   const tools = buildToolDefs();
@@ -20,7 +39,7 @@ export function createServer(client: BBClient): Server {
   const server = new Server(
     {
       name: "buchhaltungsbutler-mcp",
-      version: "1.0.0",
+      version: readPackageVersion(),
     },
     {
       capabilities: { tools: {} },
