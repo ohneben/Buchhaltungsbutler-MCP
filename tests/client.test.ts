@@ -6,6 +6,46 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("BBClient credential loading", () => {
+  it("does not touch the config until a call is made", () => {
+    // Scanners and MCP clients must be able to connect and list tools before
+    // any credentials exist, so constructing must never throw.
+    const load = vi.fn(() => {
+      throw new Error("Missing required configuration: BB_API_CLIENT");
+    });
+    expect(() => new BBClient(load)).not.toThrow();
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a missing credential on the call instead of at startup", async () => {
+    const client = new BBClient(() => {
+      throw new Error("Missing required configuration: BB_API_CLIENT");
+    });
+    await expect(client.call("/accounts/get", {})).rejects.toThrow(
+      /Missing required configuration/
+    );
+  });
+
+  it("loads the config once and reuses it across calls", async () => {
+    const cfg = {
+      apiClient: "c",
+      apiSecret: "s",
+      apiKey: "k",
+      baseUrl: "https://bb.test/api/v1",
+      rateLimit: 90,
+    };
+    const load = vi.fn(() => cfg);
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new BBClient(load);
+    await client.call("/accounts/get", {});
+    await client.call("/accounts/get", {});
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("loadConfig", () => {
   it("throws when required credentials are missing", () => {
     vi.stubEnv("BB_API_CLIENT", "");
