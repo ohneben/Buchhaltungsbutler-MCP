@@ -372,28 +372,6 @@ npm run list-tools # kategorisierten Tool-Katalog ausgeben (ohne Zugangsdaten)
 Die CI baut und testet jeden Push unter Node 20 und 22; Pushes auf `main` veröffentlichen
 zusätzlich ein Docker-Image in der GitHub Container Registry.
 
-### Ein Release veröffentlichen
-
-Die Versionsnummer steht ausschließlich im Git-Tag. Ein Release besteht deshalb aus
-genau einem Schritt: einen Tag `vX.Y.Z` anlegen, etwa über *Releases → Draft a new
-release* auf GitHub. Alles Weitere erledigt der Workflow:
-
-| Was | Woher die Version kommt |
-| --- | --- |
-| Docker-Image `ghcr.io/ohneben/buchhaltungsbutler-mcp:X.Y.Z` | aus dem Tag |
-| `version` in der `package.json` im Image | wird beim Bauen aus dem Tag gestempelt |
-| Version, die der Server per MCP meldet | liest die gestempelte `package.json` |
-| Eintrag im [MCP-Registry](https://registry.modelcontextprotocol.io) | aus dem Tag |
-
-In der `package.json` im Repository steht dauerhaft `0.0.0-dev`. Das ist Absicht: sie
-wird nie von Hand gepflegt. Builds ohne Tag melden `0.0.0-dev.g<commit>`, sodass sich
-ein Image jederzeit einem Commit zuordnen lässt.
-
-Muss eine Version ohne neuen Tag nachgezogen werden, etwa nach einem fehlgeschlagenen
-Lauf, geht das über *Actions → Publish image & MCP Registry entry → Run workflow* mit
-der Version als Eingabe. Eine bereits veröffentlichte Version zu wiederholen ist
-unschädlich, die Registry meldet sie als Duplikat und der Lauf bleibt grün.
-
 ## Hinweise & Konventionen
 
 - **Datumsangaben**: `YYYY-MM-DD`. **Beträge**: Punkt als Dezimaltrennzeichen (z. B. `-12.30`).

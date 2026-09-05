@@ -1,3 +1,6 @@
+# Release = ein neuer Tag vX.Y.Z, sonst nichts. Die Versionsnummer steht
+# ausschliesslich im Tag und wird von hier aus in das Image, die package.json
+# und den Registry-Eintrag gestempelt. Nichts davon wird von Hand gepflegt.
 name: Publish image & MCP Registry entry
 
 on:
