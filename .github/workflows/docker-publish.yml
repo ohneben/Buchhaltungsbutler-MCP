@@ -6,6 +6,14 @@ on:
     tags: ['v*']
   release:
     types: [published]
+  # Manueller Lauf, falls eine Version ohne neuen Tag (nach-)veroeffentlicht
+  # werden muss. Die Version wird dann von Hand vorgegeben.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version fuer Image-Tag und Registry-Eintrag, z. B. 1.0.3'
+        required: true
+        type: string
 
 # Never run more than one publish per ref at a time.
 concurrency:
@@ -42,6 +50,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -59,8 +68,9 @@ jobs:
   publish-mcp-registry:
     name: publish to MCP Registry
     needs: publish
-    # Nur für Release-Tags: die Registry versioniert pro Tag, nicht pro Commit.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Die Registry versioniert pro Release, nicht pro Commit: nur bei einem
+    # v*-Tag oder bei einem manuellen Lauf mit vorgegebener Version.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,9 +82,19 @@ jobs:
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
-      - name: Pin server.json to the tagged version
+      - name: Pin server.json to the released version
+        env:
+          # Ueber die Umgebung statt per Interpolation in den Skripttext, damit
+          # die Eingabe nicht als Shell-Code landen kann.
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${INPUT_VERSION:-${GITHUB_REF#refs/tags/v}}"
+          case "$VERSION" in
+            ''|*[!0-9A-Za-z.+-]*)
+              echo "Unbrauchbare Version: '$VERSION'" >&2
+              exit 1
+              ;;
+          esac
           jq --arg v "$VERSION" '
             .version = $v
             | .packages[0].identifier = "ghcr.io/ohneben/buchhaltungsbutler-mcp:" + $v
