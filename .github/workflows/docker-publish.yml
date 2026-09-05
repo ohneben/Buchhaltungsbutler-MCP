@@ -4,8 +4,6 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-  release:
-    types: [published]
   # Manueller Lauf, falls eine Version ohne neuen Tag (nach-)veroeffentlicht
   # werden muss. Die Version wird dann von Hand vorgegeben.
   workflow_dispatch:
@@ -106,4 +104,17 @@ jobs:
         run: ./mcp-publisher login github-oidc
 
       - name: Publish server to MCP Registry
-        run: ./mcp-publisher publish
+        run: |
+          set +e
+          OUTPUT=$(./mcp-publisher publish 2>&1)
+          STATUS=$?
+          echo "$OUTPUT"
+          if [ "$STATUS" -ne 0 ]; then
+            case "$OUTPUT" in
+              *'cannot publish duplicate version'*)
+                echo "::notice::Diese Version steht bereits in der Registry, nichts zu tun."
+                exit 0
+                ;;
+            esac
+            exit "$STATUS"
+          fi
