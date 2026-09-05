@@ -15,8 +15,8 @@ ENV NODE_ENV=production
 ENV MCP_TRANSPORT=http
 ENV PORT=3000
 
-# Eigentumsnachweis für das MCP-Registry: der Wert muss exakt dem Feld "name"
-# in server.json entsprechen, sonst lehnt die Registry das Image ab.
+# Ownership proof for the MCP Registry: this must match the "name" field in
+# server.json exactly, otherwise the registry rejects the image.
 LABEL io.modelcontextprotocol.server.name="io.github.ohneben/buchhaltungsbutler-mcp"
 
 COPY package.json package-lock.json* ./

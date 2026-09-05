@@ -1,6 +1,6 @@
 {
   "name": "buchhaltungsbutler-mcp",
-  "version": "1.0.3",
+  "version": "0.0.0-dev",
   "description": "Model Context Protocol server for the BuchhaltungsButler API (v1). Exposes all 54 endpoints as categorized MCP tools (read-only / write / destructive).",
   "keywords": [
     "mcp",

@@ -4,12 +4,11 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-  # Manueller Lauf, falls eine Version ohne neuen Tag (nach-)veroeffentlicht
-  # werden muss. Die Version wird dann von Hand vorgegeben.
+  # Manual run, to (re-)publish a version without cutting a new tag.
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version fuer Image-Tag und Registry-Eintrag, z. B. 1.0.3'
+        description: 'Version for the image tag and registry entry, e.g. 1.0.3'
         required: true
         type: string
 
@@ -23,11 +22,63 @@ permissions:
   packages: write
 
 jobs:
+  # The release version is derived here once, from the tag, and then reused by
+  # every job below. That way a release lives in exactly one place: the tag.
+  version:
+    name: determine version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      is_release: ${{ steps.pick.outputs.is_release }}
+    steps:
+      - name: Derive version from the ref
+        id: pick
+        env:
+          # Via the environment rather than interpolated into the script text,
+          # so the input cannot end up being run as shell code.
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          IS_RELEASE=true
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            case "$GITHUB_REF" in
+              refs/tags/v*)
+                VERSION="${GITHUB_REF#refs/tags/v}"
+                ;;
+              *)
+                # Not a release: mark the build with the commit it came from.
+                VERSION="0.0.0-dev.g$(printf '%s' "$GITHUB_SHA" | cut -c1-7)"
+                IS_RELEASE=false
+                ;;
+            esac
+          fi
+          case "$VERSION" in
+            ''|*[!0-9A-Za-z.+-]*)
+              echo "Unusable version: '$VERSION'" >&2
+              exit 1
+              ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_release=$IS_RELEASE" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION (release: $IS_RELEASE)"
+
   publish:
     name: build & push to GHCR
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # package.json is not the source of truth for the version; the tag is.
+      # Stamping it here is what the server reports over MCP at runtime, so no
+      # release ever needs a manual version bump in the repository.
+      - name: Stamp the version into package.json
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "package.json is now at $VERSION"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -48,7 +99,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
-            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.is_release == 'true' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -65,14 +116,13 @@ jobs:
 
   publish-mcp-registry:
     name: publish to MCP Registry
-    needs: publish
-    # Die Registry versioniert pro Release, nicht pro Commit: nur bei einem
-    # v*-Tag oder bei einem manuellen Lauf mit vorgegebener Version.
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    needs: [version, publish]
+    # The registry versions per release, not per commit.
+    if: needs.version.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # für die OIDC-Anmeldung an der Registry
+      id-token: write # for the OIDC login to the registry
     steps:
       - uses: actions/checkout@v4
 
@@ -82,17 +132,8 @@ jobs:
 
       - name: Pin server.json to the released version
         env:
-          # Ueber die Umgebung statt per Interpolation in den Skripttext, damit
-          # die Eingabe nicht als Shell-Code landen kann.
-          INPUT_VERSION: ${{ github.event.inputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          VERSION="${INPUT_VERSION:-${GITHUB_REF#refs/tags/v}}"
-          case "$VERSION" in
-            ''|*[!0-9A-Za-z.+-]*)
-              echo "Unbrauchbare Version: '$VERSION'" >&2
-              exit 1
-              ;;
-          esac
           jq --arg v "$VERSION" '
             .version = $v
             | .packages[0].identifier = "ghcr.io/ohneben/buchhaltungsbutler-mcp:" + $v
@@ -112,7 +153,7 @@ jobs:
           if [ "$STATUS" -ne 0 ]; then
             case "$OUTPUT" in
               *'cannot publish duplicate version'*)
-                echo "::notice::Diese Version steht bereits in der Registry, nichts zu tun."
+                echo "::notice::This version is already in the registry, nothing to do."
                 exit 0
                 ;;
             esac
