@@ -15,6 +15,10 @@ ENV NODE_ENV=production
 ENV MCP_TRANSPORT=http
 ENV PORT=3000
 
+# Eigentumsnachweis für das MCP-Registry: der Wert muss exakt dem Feld "name"
+# in server.json entsprechen, sonst lehnt die Registry das Image ab.
+LABEL io.modelcontextprotocol.server.name="io.github.ohneben/buchhaltungsbutler-mcp"
+
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist

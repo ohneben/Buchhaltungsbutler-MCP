@@ -1,0 +1,62 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ohneben/buchhaltungsbutler-mcp",
+  "title": "BuchhaltungsButler",
+  "description": "BuchhaltungsButler API v1: alle 54 Endpunkte als sicherheitskategorisierte MCP-Tools",
+  "version": "1.0.3",
+  "websiteUrl": "https://github.com/ohneben/Buchhaltungsbutler-MCP#readme",
+  "repository": {
+    "url": "https://github.com/ohneben/Buchhaltungsbutler-MCP",
+    "source": "github",
+    "id": "1290992039"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/ohneben/buchhaltungsbutler-mcp:1.0.3",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "Transport des Servers. Fuer lokale MCP-Clients auf 'stdio' setzen; das Image startet sonst den HTTP-Transport.",
+          "isRequired": true,
+          "default": "stdio",
+          "choices": ["stdio", "http"]
+        },
+        {
+          "name": "BB_API_CLIENT",
+          "description": "BuchhaltungsButler API-Client (HTTP-Basic-Benutzername). Zu finden unter Einstellungen -> API.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "BB_API_SECRET",
+          "description": "BuchhaltungsButler API-Secret (HTTP-Basic-Passwort). Zu finden unter Einstellungen -> API.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "BB_API_KEY",
+          "description": "api_key des Mandanten, auf dem gearbeitet wird. Zu finden in den Firmendaten des Kunden.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "BB_RATE_LIMIT",
+          "description": "Clientseitiges Limit an Anfragen pro Minute. BuchhaltungsButler erlaubt 100 pro Kunde und Minute.",
+          "isRequired": false,
+          "default": "90",
+          "format": "number"
+        },
+        {
+          "name": "BB_BASE_URL",
+          "description": "Ueberschreibt die API-Basis-URL. Standard ist der Wert aus der mitgelieferten Spec.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
