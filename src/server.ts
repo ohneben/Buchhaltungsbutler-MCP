@@ -13,12 +13,14 @@ import {
 import { buildToolDefs, specInfo, type ToolDef } from "./spec.js";
 import { BBClient, type BBConfig } from "./client.js";
 
-const FALLBACK_VERSION = "0.0.0-dev";
+const FALLBACK_VERSION = "unknown";
 
 /**
  * The version this server reports over MCP. It is read from package.json,
- * which CI stamps from the release tag, so a release never has to be written
- * down in a second place. Unreleased builds report FALLBACK_VERSION.
+ * which always carries the last released version: CI stamps it from the
+ * release tag and writes it back into the repository, so the number is never
+ * maintained by hand and never a placeholder. FALLBACK_VERSION is only ever
+ * reported if package.json cannot be read at all.
  */
 function readPackageVersion(): string {
   try {
