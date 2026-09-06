@@ -3,7 +3,7 @@
   "name": "io.github.ohneben/buchhaltungsbutler-mcp",
   "title": "BuchhaltungsButler",
   "description": "BuchhaltungsButler API v1: alle 54 Endpunkte als sicherheitskategorisierte MCP-Tools",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "websiteUrl": "https://github.com/ohneben/Buchhaltungsbutler-MCP#readme",
   "repository": {
     "url": "https://github.com/ohneben/Buchhaltungsbutler-MCP",
@@ -13,7 +13,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/ohneben/buchhaltungsbutler-mcp:1.0.3",
+      "identifier": "ghcr.io/ohneben/buchhaltungsbutler-mcp:1.0.4",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"
@@ -24,7 +24,10 @@
           "description": "Transport des Servers. Fuer lokale MCP-Clients auf 'stdio' setzen; das Image startet sonst den HTTP-Transport.",
           "isRequired": true,
           "default": "stdio",
-          "choices": ["stdio", "http"]
+          "choices": [
+            "stdio",
+            "http"
+          ]
         },
         {
           "name": "BB_API_CLIENT",
