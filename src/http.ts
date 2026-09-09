@@ -135,9 +135,32 @@ export function weakTokenWarning(cfg: HttpConfig): string | undefined {
  * the threat model — so nobody behind a reverse proxy is forced to configure
  * anything.
  */
+/** The loopback names a Host header can carry for this machine. */
+export const LOOPBACK_ALLOWLIST = ["localhost", "127.0.0.1", "[::1]"];
+
+/**
+ * Which hostnames /health accepts: whatever the MCP path accepts, plus the
+ * loopback names, always.
+ *
+ * A liveness probe is not a browser and does not send the public hostname. The
+ * HEALTHCHECK in this repo's own Dockerfile calls `http://127.0.0.1:3000/health`,
+ * so configuring MCP_ALLOWED_HOSTS for a reverse proxy would otherwise make the
+ * container's own health check fail with 403 and mark it unhealthy. Widening
+ * this costs nothing: a loopback Host header can only come from the same host,
+ * and /health returns no data beyond a fixed server name.
+ *
+ * A probe that connects by container IP or service name still needs that name
+ * in MCP_ALLOWED_HOSTS; there is no way to know it up front.
+ */
+export function healthHostAllowlist(cfg: HttpConfig): string[] | undefined {
+  const base = hostAllowlist(cfg);
+  if (!base) return undefined;
+  return [...new Set([...base, ...LOOPBACK_ALLOWLIST])];
+}
+
 export function hostAllowlist(cfg: HttpConfig): string[] | undefined {
   if (cfg.allowedHosts.length) return cfg.allowedHosts;
-  if (isLoopbackHost(cfg.host)) return ["localhost", "127.0.0.1", "[::1]"];
+  if (isLoopbackHost(cfg.host)) return [...LOOPBACK_ALLOWLIST];
   return undefined;
 }
 

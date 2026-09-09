@@ -417,8 +417,12 @@ zusätzlich ein Docker-Image in der GitHub Container Registry.
   ein. Dann hängt die Prüfung nicht an der öffentlichen Domain und übersteht einen
   Domainwechsel. (Tipp von [@WinFuture23](https://github.com/WinFuture23).)
 - **`/health` liegt hinter der Host-Prüfung**, aber vor der Token-Prüfung: ein
-  Health-Check der Plattform braucht kein Token. Setzt du `MCP_ALLOWED_HOSTS`,
-  muss der Name, unter dem der Health-Check anfragt, mit in die Liste.
+  Health-Check der Plattform braucht kein Token. Zusätzlich akzeptiert `/health`
+  **immer** `localhost`, `127.0.0.1` und `[::1]`, damit der `HEALTHCHECK` aus dem
+  mitgelieferten Dockerfile weiterläuft, wenn du `MCP_ALLOWED_HOSTS` auf deine
+  öffentliche Domain setzt. Fragt dein Health-Check dagegen über die Container-IP
+  oder einen Service-Namen an, musst du diesen Namen in `MCP_ALLOWED_HOSTS`
+  aufnehmen.
 - Der `api_key` pro Tool-Aufruf ist standardmäßig **deaktiviert**
   (`BB_ALLOW_API_KEY_OVERRIDE=1` schaltet ihn frei), damit das Modell nicht selbst
   entscheiden kann, auf welchen Mandanten geschrieben wird.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bearerFrom,
+  healthHostAllowlist,
   hostAllowlist,
   isLoopbackHost,
   loadHttpConfig,
@@ -183,5 +184,36 @@ describe("weakTokenWarning", () => {
   it("warns one character below the minimum", () => {
     const short = "x".repeat(MIN_TOKEN_LENGTH - 1);
     expect(weakTokenWarning(base({ MCP_AUTH_TOKEN: short }))).toBeDefined();
+  });
+});
+
+describe("healthHostAllowlist", () => {
+  it("adds the loopback names to a configured allowlist", () => {
+    // Regression guard: this repo's own Dockerfile HEALTHCHECK calls
+    // http://127.0.0.1:3000/health, so pinning MCP_ALLOWED_HOSTS to a public
+    // hostname used to make the container mark itself unhealthy.
+    expect(
+      healthHostAllowlist(
+        base({ HOST: "0.0.0.0", MCP_AUTH_TOKEN: "t", MCP_ALLOWED_HOSTS: "mcp.example.com" })
+      )
+    ).toEqual(["mcp.example.com", "localhost", "127.0.0.1", "[::1]"]);
+  });
+
+  it("does not duplicate a loopback name that is already allowed", () => {
+    expect(
+      healthHostAllowlist(base({ HOST: "127.0.0.1", MCP_ALLOWED_HOSTS: "localhost" }))
+    ).toEqual(["localhost", "127.0.0.1", "[::1]"]);
+  });
+
+  it("stays off wherever the MCP path is unchecked", () => {
+    expect(healthHostAllowlist(base({ HOST: "0.0.0.0", MCP_AUTH_TOKEN: "t" }))).toBeUndefined();
+  });
+
+  it("matches the MCP allowlist on a token-less loopback bind", () => {
+    expect(healthHostAllowlist(base({ HOST: "127.0.0.1" }))).toEqual([
+      "localhost",
+      "127.0.0.1",
+      "[::1]",
+    ]);
   });
 });

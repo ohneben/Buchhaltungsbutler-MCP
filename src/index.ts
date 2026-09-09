@@ -19,8 +19,10 @@ import { createServer } from "./server.js";
 import { BBClient } from "./client.js";
 import {
   bearerFrom,
+  healthHostAllowlist,
   hostAllowlist,
   loadHttpConfig,
+  LOOPBACK_ALLOWLIST,
   startupRefusal,
   tokenMatches,
   weakTokenWarning,
@@ -62,23 +64,31 @@ async function runHttp(): Promise<void> {
 
   // ---- everything below runs BEFORE the body is read ----
 
-  // 1. DNS-rebinding protection, applied to every route rather than just the
-  //    MCP path: /health was previously reachable with any Host header and
-  //    answered with the server name, which is a free fingerprint.
+  // 1. DNS-rebinding protection. /health gets the same rule plus the loopback
+  //    names, so a liveness probe on 127.0.0.1 keeps working even when
+  //    MCP_ALLOWED_HOSTS is pinned to a public hostname.
   const allowlist = hostAllowlist(cfg);
-  if (allowlist) {
-    app.use(hostHeaderValidation(allowlist));
-    console.error(
-      `buchhaltungsbutler-mcp: Host header restricted to ${allowlist.join(", ")}`
-    );
-  }
+  const healthAllowlist = healthHostAllowlist(cfg);
 
   // Liveness only, no credentials involved and no body read. Deliberately in
-  // front of the auth gate so a platform health check needs no token, but
-  // behind the Host check above.
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok", server: "buchhaltungsbutler-mcp" });
-  });
+  // front of the auth gate so a platform health check needs no token.
+  app.get(
+    "/health",
+    ...(healthAllowlist ? [hostHeaderValidation(healthAllowlist)] : []),
+    (_req: Request, res: Response) => {
+      res.json({ status: "ok", server: "buchhaltungsbutler-mcp" });
+    }
+  );
+
+  if (allowlist) {
+    app.use(cfg.path, hostHeaderValidation(allowlist));
+    console.error(
+      `buchhaltungsbutler-mcp: Host header restricted to ${allowlist.join(", ")}` +
+        (healthAllowlist && healthAllowlist.length !== allowlist.length
+          ? ` (/health additionally accepts ${LOOPBACK_ALLOWLIST.join(", ")})`
+          : "")
+    );
+  }
 
   // 2. Shared-secret gate. Registered as middleware rather than called inside
   //    the route so an unauthenticated caller is rejected before express.json
