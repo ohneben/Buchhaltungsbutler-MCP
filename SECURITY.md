@@ -1,57 +1,67 @@
-# Security Policy
+# Sicherheitsrichtlinie
 
-## Supported Versions
+## Unterstützte Versionen
 
-This project tracks the latest commit on the `main` branch. Security fixes land
-there — please make sure you are running the most recent version before
-reporting an issue.
+Dieses Projekt verfolgt den jeweils neuesten Commit auf dem `main`-Branch.
+Sicherheitsfixes landen dort — bitte stelle sicher, dass du die aktuellste
+Version einsetzt, bevor du ein Problem meldest.
 
-| Version | Supported |
-| ------- | :-------: |
-| `main` (latest) | ✅ |
-| older commits   | ❌ |
+| Version | Unterstützt |
+| ------- | :---------: |
+| `main` (aktuell) | ✅ |
+| ältere Commits   | ❌ |
 
-## Reporting a Vulnerability
+## Sicherheitslücken melden
 
-**Please do not open a public issue for security problems.**
+**Bitte eröffne für Sicherheitsprobleme kein öffentliches Issue.**
 
-Report vulnerabilities privately through GitHub:
+Melde Schwachstellen vertraulich über GitHub:
 
-1. Open this repository's [**Security** tab](../../security).
-2. Click [**Report a vulnerability**](../../security/advisories/new) to start a
-   private security advisory.
+1. Öffne den [**Security**-Tab](../../security) dieses Repositorys.
+2. Klicke auf [**Report a vulnerability**](../../security/advisories/new), um ein
+   privates Security Advisory zu starten.
 
-> If the "Report a vulnerability" button isn't visible, a maintainer needs to
-> enable **Private vulnerability reporting** under **Settings → Security**.
+> Falls der Button „Report a vulnerability" nicht sichtbar ist, muss ein
+> Maintainer zuerst unter **Settings → Security** die Option
+> **Private vulnerability reporting** aktivieren.
 
-Please include:
+Bitte gib an:
 
-- a description of the issue and its impact,
-- steps to reproduce (a proof of concept if possible), and
-- the affected version/commit and your environment.
+- eine Beschreibung des Problems und seiner Auswirkung,
+- Schritte zur Reproduktion (nach Möglichkeit mit Proof of Concept) und
+- die betroffene Version bzw. den Commit sowie deine Umgebung.
 
-You'll get an initial response on a best-effort basis. Once a fix is ready it is
-released on `main` and the advisory is published.
+Eine erste Rückmeldung erhältst du nach bestem Bemühen. Sobald ein Fix bereit
+ist, wird er auf `main` veröffentlicht und das Advisory publiziert.
 
-## Deployment & Hardening Notes
+## Hinweise zu Betrieb und Absicherung
 
-This server bridges an MCP client to the **BuchhaltungsButler cloud API**. It can
-read and write real accounting data, so treat it accordingly:
+Dieser Server verbindet einen MCP-Client mit der **BuchhaltungsButler-Cloud-API**.
+Er kann echte Buchhaltungsdaten lesen und schreiben — behandle ihn entsprechend:
 
-- **Your API credentials are secrets.** `BB_API_CLIENT`, `BB_API_SECRET`, and
-  `BB_API_KEY` live in `.env`, which is git-ignored — never commit or share them.
-  If any of them leaks, rotate it in **BuchhaltungsButler → Settings → API**.
-- **Credentials never reach the model.** The server injects Basic auth and the
-  `api_key` on every outgoing request; the MCP client (and the LLM behind it)
-  only ever sees tool inputs and API responses, never your secrets.
-- **The HTTP endpoint is unauthenticated by default**, which is fine for
-  localhost-only use. If you expose it beyond your machine, set `MCP_AUTH_TOKEN`
-  and require it via an `Authorization: Bearer <token>` header. Prefer running it
-  behind TLS (a reverse proxy) rather than exposing the raw port.
-- **Mind the destructive tools.** Two tools delete data and several revert state.
-  They carry `destructiveHint` / non-`readOnlyHint` annotations so a well-behaved
-  host can prompt for confirmation — keep that confirmation on.
-- **Keep the container on a trusted network** and **keep dependencies current**
-  (see Dependabot, if enabled).
+- **Deine API-Zugangsdaten sind Geheimnisse.** `BB_API_CLIENT`, `BB_API_SECRET`
+  und `BB_API_KEY` liegen in `.env`, die per `.gitignore` ausgeschlossen ist —
+  committe oder teile sie niemals. Falls eines davon abfließt, rotiere es in
+  **BuchhaltungsButler → Einstellungen → API**.
+- **Zugangsdaten erreichen das Modell nie.** Der Server setzt Basic-Auth und den
+  `api_key` bei jedem ausgehenden Request selbst ein; der MCP-Client (und das
+  LLM dahinter) sieht ausschließlich Tool-Eingaben und API-Antworten, niemals
+  deine Secrets.
+- **Der HTTP-Endpunkt ist standardmäßig nicht authentifiziert.** Setze
+  `MCP_AUTH_TOKEN` und verlange es über den Header
+  `Authorization: Bearer <Token>` — **auch dann, wenn der Server nur auf
+  `localhost` läuft.** Der Server validiert derzeit weder den `Host`- noch den
+  `Origin`-Header, deshalb kann eine beliebige Webseite im Browser einen
+  Endpunkt auf `localhost` per DNS-Rebinding ansprechen. Ein reiner
+  localhost-Bind ist also **kein** ausreichender Schutz. Machst du den Server
+  über deinen Rechner hinaus erreichbar, betreibe ihn zusätzlich hinter TLS
+  (Reverse Proxy), statt den Port direkt zu veröffentlichen.
+- **Achte auf die destruktiven Tools.** **Drei** Tools löschen bzw. stornieren
+  Daten — `cost_locations_delete`, `receipts_delete_id_by_customer` und
+  `postings_cancel` — und mehrere weitere setzen Zustände zurück. Sie tragen
+  `destructiveHint` bzw. kein `readOnlyHint`, sodass ein gut umgesetzter Host
+  vor der Ausführung nachfragen kann — lass diese Bestätigung aktiviert.
+- **Betreibe den Container in einem vertrauenswürdigen Netz** und **halte die
+  Abhängigkeiten aktuell** (siehe Dependabot, falls aktiviert).
 
-Thank you for helping keep this project and its users safe.
+Danke, dass du dabei hilfst, dieses Projekt und seine Nutzer sicher zu halten.
