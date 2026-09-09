@@ -4,9 +4,11 @@ import {
   hostAllowlist,
   isLoopbackHost,
   loadHttpConfig,
+  MIN_TOKEN_LENGTH,
   positiveNumber,
   startupRefusal,
   tokenMatches,
+  weakTokenWarning,
 } from "../src/http.js";
 
 const base = (over: NodeJS.ProcessEnv = {}) =>
@@ -135,5 +137,28 @@ describe("loadHttpConfig hardening against bad numbers", () => {
     expect(cfg.sessionTtlMs).toBe(1_800_000);
     expect(cfg.maxSessions).toBe(256);
     expect(cfg.port).toBe(3000);
+  });
+});
+
+describe("weakTokenWarning", () => {
+  it("stays quiet when no token is set (startupRefusal owns that case)", () => {
+    expect(weakTokenWarning(base({ HOST: "127.0.0.1" }))).toBeUndefined();
+  });
+
+  it("warns about a token that is trivially guessable", () => {
+    const msg = weakTokenWarning(base({ MCP_AUTH_TOKEN: "a" }));
+    expect(msg).toBeDefined();
+    expect(msg).toContain("openssl rand -hex 32");
+  });
+
+  it("stays quiet at the minimum length and above", () => {
+    const ok = "x".repeat(MIN_TOKEN_LENGTH);
+    expect(weakTokenWarning(base({ MCP_AUTH_TOKEN: ok }))).toBeUndefined();
+    expect(weakTokenWarning(base({ MCP_AUTH_TOKEN: ok + "x" }))).toBeUndefined();
+  });
+
+  it("warns one character below the minimum", () => {
+    const short = "x".repeat(MIN_TOKEN_LENGTH - 1);
+    expect(weakTokenWarning(base({ MCP_AUTH_TOKEN: short }))).toBeDefined();
   });
 });

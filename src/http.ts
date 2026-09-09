@@ -95,6 +95,27 @@ export function startupRefusal(cfg: HttpConfig): string | undefined {
   );
 }
 
+/** Shortest token we do not warn about. Below this, a token is guessable. */
+export const MIN_TOKEN_LENGTH = 16;
+
+/**
+ * A set token is not automatically a good token. `startupRefusal` only checks
+ * that the string is non-empty, so `MCP_AUTH_TOKEN=a` starts and reports
+ * "bearer auth enabled" while being trivially brute-forceable. The advice to
+ * use `openssl rand -hex 32` only ever appears in the refusal text, which this
+ * operator never sees.
+ */
+export function weakTokenWarning(cfg: HttpConfig): string | undefined {
+  if (!cfg.authToken) return undefined;
+  if (cfg.authToken.length >= MIN_TOKEN_LENGTH) return undefined;
+  return (
+    `WARNING - MCP_AUTH_TOKEN is only ${cfg.authToken.length} ` +
+    `character${cfg.authToken.length === 1 ? "" : "s"} long. ` +
+    `This endpoint can read, write and delete accounting data and is the only ` +
+    `thing protecting it. Generate a real one with: openssl rand -hex 32`
+  );
+}
+
 /**
  * Which hostnames the Host header may carry, or undefined when no check
  * applies. A bearer token already defeats DNS rebinding — a browser driving
