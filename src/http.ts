@@ -22,6 +22,19 @@ function isTruthy(value: string | undefined): boolean {
   return /^(1|true|yes)$/i.test((value ?? "").trim());
 }
 
+/**
+ * A misspelled number must not silently switch a safety limit off: Number("")
+ * is 0 and Number("abc") is NaN, and both would make the sweep or the session
+ * cap a no-op. Anything that is not a positive number falls back.
+ */
+export function positiveNumber(
+  value: string | undefined,
+  fallback: number
+): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 export interface HttpConfig {
   host: string;
   port: number;
@@ -39,7 +52,7 @@ export function loadHttpConfig(
 ): HttpConfig {
   return {
     host: env.HOST || "0.0.0.0",
-    port: Number(env.PORT || "3000"),
+    port: positiveNumber(env.PORT, 3000),
     path: env.MCP_HTTP_PATH || "/mcp",
     authToken: env.MCP_AUTH_TOKEN || "",
     allowedHosts: (env.MCP_ALLOWED_HOSTS ?? "")
@@ -47,8 +60,8 @@ export function loadHttpConfig(
       .map((s) => s.trim())
       .filter(Boolean),
     allowInsecure: isTruthy(env.MCP_ALLOW_INSECURE),
-    sessionTtlMs: Number(env.MCP_SESSION_TTL || "1800") * 1000,
-    maxSessions: Number(env.MCP_MAX_SESSIONS || "256"),
+    sessionTtlMs: positiveNumber(env.MCP_SESSION_TTL, 1800) * 1000,
+    maxSessions: positiveNumber(env.MCP_MAX_SESSIONS, 256),
     bodyLimit: env.MCP_BODY_LIMIT || "25mb",
   };
 }

@@ -4,6 +4,7 @@ import {
   hostAllowlist,
   isLoopbackHost,
   loadHttpConfig,
+  positiveNumber,
   startupRefusal,
   tokenMatches,
 } from "../src/http.js";
@@ -106,5 +107,33 @@ describe("loadHttpConfig", () => {
     expect(cfg.sessionTtlMs).toBe(1_800_000);
     expect(cfg.maxSessions).toBe(256);
     expect(cfg.bodyLimit).toBe("25mb");
+  });
+});
+
+describe("positiveNumber", () => {
+  it("falls back rather than silently disabling a limit", () => {
+    // Number("abc") is NaN and Number("") is 0 — both would turn the idle
+    // sweep or the session cap into a no-op.
+    expect(positiveNumber("abc", 256)).toBe(256);
+    expect(positiveNumber("", 256)).toBe(256);
+    expect(positiveNumber("0", 256)).toBe(256);
+    expect(positiveNumber("-5", 256)).toBe(256);
+    expect(positiveNumber(undefined, 256)).toBe(256);
+  });
+  it("takes a valid positive value", () => {
+    expect(positiveNumber("10", 256)).toBe(10);
+  });
+});
+
+describe("loadHttpConfig hardening against bad numbers", () => {
+  it("keeps the safety limits when the env vars are garbage", () => {
+    const cfg = loadHttpConfig({
+      MCP_SESSION_TTL: "abc",
+      MCP_MAX_SESSIONS: "0",
+      PORT: "",
+    } as NodeJS.ProcessEnv);
+    expect(cfg.sessionTtlMs).toBe(1_800_000);
+    expect(cfg.maxSessions).toBe(256);
+    expect(cfg.port).toBe(3000);
   });
 });
