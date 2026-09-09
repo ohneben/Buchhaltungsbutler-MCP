@@ -118,14 +118,25 @@ export function weakTokenWarning(cfg: HttpConfig): string | undefined {
 
 /**
  * Which hostnames the Host header may carry, or undefined when no check
- * applies. A bearer token already defeats DNS rebinding — a browser driving
- * the attack cannot produce the Authorization header — so the check exists
- * for the token-less local case, and as an explicit allowlist for anyone
- * behind a reverse proxy.
+ * applies. The decision is derived from the bind address, never from whether
+ * a token is set — the same rule the official SDK applies in
+ * `createMcpExpressApp`, which reads `host` and no credential at all.
+ *
+ * A token does NOT replace this check. DNS rebinding keeps the origin
+ * constant and only swaps the IP, so the request is same-origin from the
+ * browser's point of view: no preflight runs, and the page may set any header
+ * it likes, `Authorization` included (it is not a forbidden request header —
+ * `Host` and `Origin` are). What actually stops the attack is that the
+ * browser attaches no ambient credentials, so the attacker must already know
+ * the token. That is one layer, and this check is the second one.
+ *
+ * A non-loopback bind stays unchecked unless an allowlist is configured: the
+ * hostname is not guessable there, and rebinding onto a public host is not
+ * the threat model — so nobody behind a reverse proxy is forced to configure
+ * anything.
  */
 export function hostAllowlist(cfg: HttpConfig): string[] | undefined {
   if (cfg.allowedHosts.length) return cfg.allowedHosts;
-  if (cfg.authToken) return undefined;
   if (isLoopbackHost(cfg.host)) return ["localhost", "127.0.0.1", "[::1]"];
   return undefined;
 }
