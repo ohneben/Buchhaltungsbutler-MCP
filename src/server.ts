@@ -16,6 +16,32 @@ import { BBClient, type BBConfig } from "./client.js";
 const FALLBACK_VERSION = "unknown";
 
 /**
+ * Optional server-side tool exposure policy, read from the environment:
+ *   BB_READ_ONLY=true        expose only the 🟢 read-only tools.
+ *   BB_TOOL_ALLOWLIST=a,b,c  expose only the named tools (applied on top).
+ * Filtered tools are neither listed nor callable, so the restriction holds
+ * even for clients that ignore annotations or lack per-tool permissions.
+ */
+export function applyToolPolicy(
+  tools: ToolDef[],
+  env: NodeJS.ProcessEnv = process.env
+): ToolDef[] {
+  let out = tools;
+  if (/^(1|true|yes)$/i.test((env.BB_READ_ONLY ?? "").trim())) {
+    out = out.filter((t) => t.category.id === "read");
+  }
+  const allow = (env.BB_TOOL_ALLOWLIST ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (allow.length) {
+    const set = new Set(allow);
+    out = out.filter((t) => set.has(t.name));
+  }
+  return out;
+}
+
+/**
  * The version this server reports over MCP. It is read from package.json,
  * which always carries the last released version: CI stamps it from the
  * release tag and writes it back into the repository, so the number is never
@@ -35,8 +61,15 @@ function readPackageVersion(): string {
 
 export function createServer(client: BBClient): Server {
   const info = specInfo();
-  const tools = buildToolDefs();
+  const allTools = buildToolDefs();
+  const tools = applyToolPolicy(allTools);
   const byName = new Map<string, ToolDef>(tools.map((t) => [t.name, t]));
+  const known = new Set(allTools.map((t) => t.name));
+  if (tools.length !== allTools.length) {
+    console.error(
+      `buchhaltungsbutler-mcp: tool policy active, exposing ${tools.length}/${allTools.length} tools`
+    );
+  }
 
   const server = new Server(
     {
@@ -68,6 +101,13 @@ export function createServer(client: BBClient): Server {
         title: t.title,
         ...t.category.annotations,
       },
+      // Annotations alone are advisory and not every host acts on them.
+      // This asks the host to confirm each destructive call regardless of
+      // the permission mode in effect. Hosts that don't know the field
+      // ignore it.
+      ...(t.category.id === "delete"
+        ? { _meta: { "anthropic/requiresUserInteraction": true } }
+        : {}),
     }));
     return { tools: list };
   });
@@ -75,12 +115,10 @@ export function createServer(client: BBClient): Server {
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const def = byName.get(req.params.name);
     if (!def) {
-      return {
-        isError: true,
-        content: [
-          { type: "text", text: `Unknown tool: ${req.params.name}` },
-        ],
-      };
+      const text = known.has(req.params.name)
+        ? `Tool disabled by server policy (BB_READ_ONLY / BB_TOOL_ALLOWLIST): ${req.params.name}`
+        : `Unknown tool: ${req.params.name}`;
+      return { isError: true, content: [{ type: "text", text }] };
     }
 
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;

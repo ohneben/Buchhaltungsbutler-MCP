@@ -10,7 +10,7 @@
  * everything.
  */
 
-import { specInfo } from "./spec.js";
+import { apiKeyOverrideAllowed, specInfo } from "./spec.js";
 
 export interface BBConfig {
   apiClient: string;
@@ -94,8 +94,11 @@ export class BBClient {
   }
 
   /**
-   * Call an endpoint. `args` are the tool arguments; `api_key` is taken from
-   * args if the caller supplied an override, otherwise from configuration.
+   * Call an endpoint. `args` are the tool arguments; `api_key` comes from
+   * configuration. A per-call override is only honoured when
+   * BB_ALLOW_API_KEY_OVERRIDE is set, because the value would otherwise be
+   * chosen by the model — a hallucinated or prompt-injected key can point at
+   * a different customer's books on accounts whose API client covers several.
    */
   async call(
     path: string,
@@ -105,8 +108,9 @@ export class BBClient {
     await limiter.take();
 
     const { api_key, ...rest } = args;
+    const override = apiKeyOverrideAllowed() ? (api_key as string) : "";
     const body = {
-      api_key: (api_key as string) || cfg.apiKey,
+      api_key: override || cfg.apiKey,
       ...rest,
     };
 

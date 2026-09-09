@@ -5,7 +5,10 @@ services:
     container_name: buchhaltungsbutler-mcp
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Published on the host loopback only. The container itself still binds
+      # 0.0.0.0 (it must), so the reachable surface is decided here. Change to
+      # "3000:3000" only together with a MCP_AUTH_TOKEN.
+      - "127.0.0.1:3000:3000"
     environment:
       MCP_TRANSPORT: http
       PORT: 3000
@@ -15,7 +18,10 @@ services:
       BB_API_KEY: ${BB_API_KEY}
       # --- optional ---
       # Shared secret required as `Authorization: Bearer <token>` on the /mcp endpoint.
+      # Required as soon as the port is published beyond 127.0.0.1.
       MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-}
+      BB_ALLOW_API_KEY_OVERRIDE: ${BB_ALLOW_API_KEY_OVERRIDE:-}
       BB_RATE_LIMIT: ${BB_RATE_LIMIT:-90}
     env_file:
       - .env
