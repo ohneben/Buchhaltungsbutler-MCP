@@ -99,6 +99,8 @@ async function runHttp(): Promise<void> {
   interface Session {
     transport: StreamableHTTPServerTransport;
     lastSeen: number;
+    /** Open SSE streams. A session serving one is in use, however quiet. */
+    streams: number;
   }
   const sessions = new Map<string, Session>();
 
@@ -115,25 +117,41 @@ async function runHttp(): Promise<void> {
     void Promise.resolve(s.transport.close()).catch(() => {});
   };
 
+  const idle = (s: Session, cutoff: number): boolean =>
+    s.streams === 0 && s.lastSeen < cutoff;
+
   // Sessions are only removed on an explicit DELETE or a transport error, and
   // each one holds a full Server instance. Without a sweep, a client that
   // reconnects instead of closing grows the map until the process dies.
+  // A session with an open SSE stream is never swept: `lastSeen` only moves
+  // when a request arrives, so an otherwise healthy long-lived stream would
+  // look idle and be cut mid-flight.
   const sweep = setInterval(() => {
     const cutoff = Date.now() - cfg.sessionTtlMs;
-    for (const [id, s] of sessions) if (s.lastSeen < cutoff) drop(id);
+    for (const [id, s] of sessions) if (idle(s, cutoff)) drop(id);
   }, 60_000);
   sweep.unref();
 
+  /** Evict the least recently used session, preferring one without a stream. */
   const evictOldest = (): void => {
-    let oldestId: string | undefined;
+    let victim: string | undefined;
     let oldest = Infinity;
+    let victimStreaming = true;
     for (const [id, s] of sessions) {
-      if (s.lastSeen < oldest) {
+      const streaming = s.streams > 0;
+      // A non-streaming candidate always beats a streaming one.
+      if (victimStreaming && !streaming) {
+        victim = id;
         oldest = s.lastSeen;
-        oldestId = id;
+        victimStreaming = false;
+        continue;
+      }
+      if (streaming === victimStreaming && s.lastSeen < oldest) {
+        victim = id;
+        oldest = s.lastSeen;
       }
     }
-    if (oldestId) drop(oldestId);
+    if (victim) drop(victim);
   };
 
   /** The spec's status for an unknown session: clients re-initialize on 404. */
@@ -163,7 +181,7 @@ async function runHttp(): Promise<void> {
           sessionIdGenerator: () => randomUUID(),
           enableJsonResponse: true,
           onsessioninitialized: (sid) => {
-            sessions.set(sid, { transport: t, lastSeen: Date.now() });
+            sessions.set(sid, { transport: t, lastSeen: Date.now(), streams: 0 });
           },
         });
         t.onclose = () => {
@@ -203,6 +221,16 @@ async function runHttp(): Promise<void> {
     if (!session) {
       unknownSession(res);
       return;
+    }
+    // A GET is the SSE stream and stays open. Count it for as long as the
+    // response lives so the idle sweep leaves the session alone.
+    const streaming = req.method === "GET";
+    if (streaming) {
+      session.streams += 1;
+      res.on("close", () => {
+        session.streams = Math.max(0, session.streams - 1);
+        session.lastSeen = Date.now();
+      });
     }
     await session.transport.handleRequest(req, res);
   };
