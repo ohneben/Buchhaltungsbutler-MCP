@@ -123,11 +123,27 @@ describe("BBClient.call", () => {
     expect(body.list_direction).toBe("inbound");
   });
 
-  it("lets an individual call override api_key", async () => {
+  it("ignores a per-call api_key override by default", async () => {
     const fetchMock = stubFetch();
     await new BBClient(cfg).call("/receipts/get", { api_key: "other-customer" });
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.api_key).toBe("other-customer");
+    expect(body.api_key).toBe("default-key");
+  });
+
+  it("honours a per-call api_key override when explicitly enabled", async () => {
+    const prev = process.env.BB_ALLOW_API_KEY_OVERRIDE;
+    process.env.BB_ALLOW_API_KEY_OVERRIDE = "1";
+    try {
+      const fetchMock = stubFetch();
+      await new BBClient(cfg).call("/receipts/get", {
+        api_key: "other-customer",
+      });
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.api_key).toBe("other-customer");
+    } finally {
+      if (prev === undefined) delete process.env.BB_ALLOW_API_KEY_OVERRIDE;
+      else process.env.BB_ALLOW_API_KEY_OVERRIDE = prev;
+    }
   });
 
   it("returns status, ok and parsed body", async () => {

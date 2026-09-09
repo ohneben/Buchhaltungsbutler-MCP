@@ -110,8 +110,9 @@ Server-Umgebung — das Modell sieht sie nie und fasst sie nie an.
 ```bash
 cp .env.example .env
 # .env bearbeiten → BB_API_CLIENT, BB_API_SECRET, BB_API_KEY setzen
-#                 → MCP_AUTH_TOKEN auf eine lange Zufallszeichenkette setzen,
-#                   falls der Server über localhost hinaus erreichbar ist
+#                 → MCP_AUTH_TOKEN setzen (Pflicht, sobald der Port über
+#                   127.0.0.1 hinaus veröffentlicht wird):
+#                   openssl rand -hex 32
 ```
 
 **2. Server starten:**
@@ -186,7 +187,12 @@ Alles wird in `.env` gesetzt (kopiert aus `.env.example`):
 | `PORT` | — | `3000` | HTTP-Port, auf dem gelauscht wird |
 | `HOST` | — | `0.0.0.0` | HTTP-Bind-Adresse |
 | `MCP_HTTP_PATH` | — | `/mcp` | HTTP-Route für MCP |
-| `MCP_AUTH_TOKEN` | — | _(aus)_ | Verlangt `Authorization: Bearer <Token>` auf `/mcp` |
+| `MCP_AUTH_TOKEN` | ⚠️ | _(aus)_ | Verlangt `Authorization: Bearer <Token>` auf `/mcp`. **Pflicht**, wenn `HOST` keine Loopback-Adresse ist — sonst startet der Server nicht |
+| `MCP_ALLOWED_HOSTS` | — | _(automatisch)_ | Erlaubte `Host`-Header, kommagetrennt (Schutz vor DNS-Rebinding). Nötig hinter einem Reverse-Proxy |
+| `MCP_ALLOW_INSECURE` | — | _(aus)_ | Hebt die Startverweigerung ohne Token auf. Nur für nachweislich unerreichbare Endpunkte |
+| `MCP_SESSION_TTL` | — | `1800` | Sekunden Leerlauf, bevor eine Session verworfen wird |
+| `MCP_MAX_SESSIONS` | — | `256` | Obergrenze gleichzeitiger Sessions |
+| `BB_ALLOW_API_KEY_OVERRIDE` | — | _(aus)_ | Erlaubt einem Tool-Aufruf, den `api_key` zu überschreiben |
 | `BB_RATE_LIMIT` | — | `90` | Clientseitiges Limit an Anfragen pro Minute |
 | `BB_BASE_URL` | — | _(aus der Spec)_ | Überschreibt die Basis-URL der API |
 
@@ -399,9 +405,16 @@ zusätzlich ein Docker-Image in der GitHub Container Registry.
 - Deine API-Zugangsdaten liegen ausschließlich in `.env`, und diese Datei ist von Git
   ausgeschlossen. **Committe niemals echte Geheimnisse.** Falls doch etwas abfließt,
   rotiere die Daten unter **BuchhaltungsButler → Einstellungen → API**.
-- Der HTTP-Endpunkt ist standardmäßig nicht authentifiziert (auf localhost unbedenklich).
-  Um ihn über deinen Rechner hinaus verfügbar zu machen, setze `MCP_AUTH_TOKEN` und
-  sende ihn als `Authorization: Bearer <Token>`-Header — idealerweise hinter TLS.
+- **Der HTTP-Endpunkt verlangt ein Token, sobald er über Loopback hinaus gebunden ist.**
+  Ohne `MCP_AUTH_TOKEN` verweigert der Server den Start und erklärt im Fehlertext, was
+  zu tun ist. Sende das Token als `Authorization: Bearer <Token>`-Header, idealerweise
+  hinter TLS.
+- **Auch auf localhost gilt:** ohne Token wird der `Host`-Header auf localhost-Namen
+  begrenzt, damit keine beliebige Webseite den Endpunkt per DNS-Rebinding ansprechen
+  kann. Hinter einem Reverse-Proxy setzt du dafür `MCP_ALLOWED_HOSTS`.
+- Der `api_key` pro Tool-Aufruf ist standardmäßig **deaktiviert**
+  (`BB_ALLOW_API_KEY_OVERRIDE=1` schaltet ihn frei), damit das Modell nicht selbst
+  entscheiden kann, auf welchen Mandanten geschrieben wird.
 
 Die vollständige Richtlinie und den Meldeweg für Sicherheitslücken findest du in
 [SECURITY.md](./SECURITY.md).

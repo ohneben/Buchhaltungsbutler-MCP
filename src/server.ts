@@ -101,6 +101,13 @@ export function createServer(client: BBClient): Server {
         title: t.title,
         ...t.category.annotations,
       },
+      // Annotations alone are advisory and not every host acts on them.
+      // This asks the host to confirm each destructive call regardless of
+      // the permission mode in effect. Hosts that don't know the field
+      // ignore it.
+      ...(t.category.id === "delete"
+        ? { _meta: { "anthropic/requiresUserInteraction": true } }
+        : {}),
     }));
     return { tools: list };
   });

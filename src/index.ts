@@ -7,11 +7,23 @@
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { hostHeaderValidation } from "@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import express, { type Request, type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { randomUUID } from "node:crypto";
 import { createServer } from "./server.js";
 import { BBClient } from "./client.js";
+import {
+  bearerFrom,
+  hostAllowlist,
+  loadHttpConfig,
+  startupRefusal,
+  tokenMatches,
+} from "./http.js";
 
 const transport = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
 
@@ -28,57 +40,134 @@ async function runStdio(): Promise<void> {
 
 async function runHttp(): Promise<void> {
   const client = new BBClient();
-  const port = Number(process.env.PORT || "3000");
-  const host = process.env.HOST || "0.0.0.0";
-  const authToken = process.env.MCP_AUTH_TOKEN || "";
-  const path = process.env.MCP_HTTP_PATH || "/mcp";
+  const cfg = loadHttpConfig();
+
+  const refusal = startupRefusal(cfg);
+  if (refusal) {
+    console.error(refusal);
+    process.exit(1);
+  }
+  if (!cfg.authToken && cfg.allowInsecure) {
+    console.error(
+      "buchhaltungsbutler-mcp: WARNING — MCP_ALLOW_INSECURE is set and no " +
+        "MCP_AUTH_TOKEN is configured. Anyone who can reach this port has " +
+        "full read/write/delete access to the accounting data."
+    );
+  }
 
   const app = express();
-  app.use(express.json({ limit: "25mb" }));
 
+  // Liveness only, no credentials involved and no body read.
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok", server: "buchhaltungsbutler-mcp" });
   });
 
-  // Optional shared-secret gate for the exposed endpoint.
-  const guard = (req: Request, res: Response): boolean => {
-    if (!authToken) return true;
-    const header = req.headers.authorization || "";
-    const provided = header.replace(/^Bearer\s+/i, "");
-    if (provided !== authToken) {
+  // ---- everything below runs BEFORE the body is read ----
+
+  // 1. DNS-rebinding protection.
+  const allowlist = hostAllowlist(cfg);
+  if (allowlist) {
+    app.use(cfg.path, hostHeaderValidation(allowlist));
+    console.error(
+      `buchhaltungsbutler-mcp: Host header restricted to ${allowlist.join(", ")}`
+    );
+  }
+
+  // 2. Shared-secret gate. Registered as middleware rather than called inside
+  //    the route so an unauthenticated caller is rejected before express.json
+  //    reads and parses a body.
+  if (cfg.authToken) {
+    app.use(cfg.path, (req: Request, res: Response, next: NextFunction) => {
+      if (tokenMatches(bearerFrom(req.headers.authorization), cfg.authToken)) {
+        next();
+        return;
+      }
       res.status(401).json({
         jsonrpc: "2.0",
         error: { code: -32001, message: "Unauthorized" },
         id: null,
       });
-      return false;
-    }
-    return true;
-  };
+    });
+  }
+
+  // 3. Only now is it worth parsing a body.
+  app.use(express.json({ limit: cfg.bodyLimit }));
 
   // Streamable HTTP with session management: `initialize` creates a session and
   // its server/transport are reused for that session's later requests. This is
   // the transport pattern Claude and `mcp-remote` expect.
-  const sessions: Record<string, StreamableHTTPServerTransport> = {};
+  interface Session {
+    transport: StreamableHTTPServerTransport;
+    lastSeen: number;
+  }
+  const sessions = new Map<string, Session>();
 
-  app.post(path, async (req: Request, res: Response) => {
-    if (!guard(req, res)) return;
+  const touch = (id: string): Session | undefined => {
+    const s = sessions.get(id);
+    if (s) s.lastSeen = Date.now();
+    return s;
+  };
+
+  const drop = (id: string): void => {
+    const s = sessions.get(id);
+    if (!s) return;
+    sessions.delete(id);
+    void Promise.resolve(s.transport.close()).catch(() => {});
+  };
+
+  // Sessions are only removed on an explicit DELETE or a transport error, and
+  // each one holds a full Server instance. Without a sweep, a client that
+  // reconnects instead of closing grows the map until the process dies.
+  const sweep = setInterval(() => {
+    const cutoff = Date.now() - cfg.sessionTtlMs;
+    for (const [id, s] of sessions) if (s.lastSeen < cutoff) drop(id);
+  }, 60_000);
+  sweep.unref();
+
+  const evictOldest = (): void => {
+    let oldestId: string | undefined;
+    let oldest = Infinity;
+    for (const [id, s] of sessions) {
+      if (s.lastSeen < oldest) {
+        oldest = s.lastSeen;
+        oldestId = id;
+      }
+    }
+    if (oldestId) drop(oldestId);
+  };
+
+  /** The spec's status for an unknown session: clients re-initialize on 404. */
+  const unknownSession = (res: Response): void => {
+    res.status(404).json({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "Session not found" },
+      id: null,
+    });
+  };
+
+  app.post(cfg.path, async (req: Request, res: Response) => {
     try {
       const sessionId = req.headers["mcp-session-id"] as string | undefined;
       let t: StreamableHTTPServerTransport;
 
-      if (sessionId && sessions[sessionId]) {
-        t = sessions[sessionId];
-      } else if (!sessionId && isInitializeRequest(req.body)) {
+      if (sessionId) {
+        const existing = touch(sessionId);
+        if (!existing) {
+          unknownSession(res);
+          return;
+        }
+        t = existing.transport;
+      } else if (isInitializeRequest(req.body)) {
+        if (sessions.size >= cfg.maxSessions) evictOldest();
         t = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           enableJsonResponse: true,
           onsessioninitialized: (sid) => {
-            sessions[sid] = t;
+            sessions.set(sid, { transport: t, lastSeen: Date.now() });
           },
         });
         t.onclose = () => {
-          if (t.sessionId) delete sessions[t.sessionId];
+          if (t.sessionId) sessions.delete(t.sessionId);
         };
         const server = createServer(client);
         await server.connect(t);
@@ -109,21 +198,45 @@ async function runHttp(): Promise<void> {
 
   // GET (SSE stream) and DELETE (session teardown) reuse the existing session.
   const bySession = async (req: Request, res: Response) => {
-    if (!guard(req, res)) return;
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    if (!sessionId || !sessions[sessionId]) {
-      res.status(400).send("Invalid or missing session ID");
+    const session = sessionId ? touch(sessionId) : undefined;
+    if (!session) {
+      unknownSession(res);
       return;
     }
-    await sessions[sessionId].handleRequest(req, res);
+    await session.transport.handleRequest(req, res);
   };
-  app.get(path, bySession);
-  app.delete(path, bySession);
+  app.get(cfg.path, bySession);
+  app.delete(cfg.path, bySession);
 
-  app.listen(port, host, () => {
+  // Without this, a malformed or oversized body reaches express's default
+  // handler, which answers with an HTML page carrying a stack trace and
+  // absolute file paths whenever NODE_ENV is not "production".
+  app.use(
+    (err: unknown, _req: Request, res: Response, next: NextFunction): void => {
+      if (res.headersSent) {
+        next(err);
+        return;
+      }
+      const e = err as { type?: string; status?: number };
+      const tooLarge = e?.type === "entity.too.large";
+      res.status(tooLarge ? 413 : e?.status && e.status < 500 ? 400 : 500).json({
+        jsonrpc: "2.0",
+        error: {
+          code: tooLarge ? -32600 : -32700,
+          message: tooLarge
+            ? `Request body exceeds the ${cfg.bodyLimit} limit`
+            : "Parse error: request body is not valid JSON",
+        },
+        id: null,
+      });
+    }
+  );
+
+  app.listen(cfg.port, cfg.host, () => {
     console.error(
-      `buchhaltungsbutler-mcp: HTTP transport ready on http://${host}:${port}${path}` +
-        (authToken ? " (bearer auth enabled)" : "")
+      `buchhaltungsbutler-mcp: HTTP transport ready on http://${cfg.host}:${cfg.port}${cfg.path}` +
+        (cfg.authToken ? " (bearer auth enabled)" : " (NO AUTH)")
     );
   });
 }
