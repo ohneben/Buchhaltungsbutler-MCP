@@ -64,10 +64,11 @@ describe("hostAllowlist", () => {
     ).toEqual(["mcp.example.com", "localhost"]);
   });
 
-  it("skips the check when a token is set (the token defeats rebinding)", () => {
+  it("leaves a non-loopback bind unchecked, so a reverse proxy needs no config", () => {
     expect(
       hostAllowlist(base({ HOST: "0.0.0.0", MCP_AUTH_TOKEN: "t" }))
     ).toBeUndefined();
+    expect(hostAllowlist(base({ HOST: "::" }))).toBeUndefined();
   });
 
   it("restricts a token-less loopback server to localhost names", () => {
@@ -76,6 +77,28 @@ describe("hostAllowlist", () => {
       "127.0.0.1",
       "[::1]",
     ]);
+  });
+
+  it("restricts a loopback server WITH a token too — the token is not a substitute", () => {
+    // Rebinding stays same-origin, so the attacking page can send any header,
+    // Authorization included. The token only helps because the browser does
+    // not attach it by itself; the Host check is the layer that does not
+    // depend on the attacker's ignorance.
+    for (const host of ["127.0.0.1", "localhost", "::1", "[::1]"]) {
+      expect(hostAllowlist(base({ HOST: host, MCP_AUTH_TOKEN: "s3cret" }))).toEqual([
+        "localhost",
+        "127.0.0.1",
+        "[::1]",
+      ]);
+    }
+  });
+
+  it("still lets an explicit allowlist win on loopback", () => {
+    expect(
+      hostAllowlist(
+        base({ HOST: "127.0.0.1", MCP_AUTH_TOKEN: "t", MCP_ALLOWED_HOSTS: "mcp.example.com" })
+      )
+    ).toEqual(["mcp.example.com"]);
   });
 });
 
