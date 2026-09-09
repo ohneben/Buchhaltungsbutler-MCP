@@ -39,7 +39,7 @@ Manche MCP-Server leiten eine API einfach nur weiter. Dieser hier ist darauf aus
 | **Maschinenlesbare MCP-Annotationen** (`readOnlyHint`, `destructiveHint`) | Hosts, die Annotationen auswerten (Claude gehört dazu), können Lesezugriffe automatisch zulassen und vor destruktiven Aktionen eine Bestätigung verlangen. |
 | **Zwei Transporte: stdio *und* Streamable HTTP** | Lokal in Claude Desktop nutzen — oder einen dauerhaft laufenden Server betreiben, den beliebig viele MCP-Clients über HTTP erreichen. |
 | **Docker + docker-compose, Health-Check, Auto-Restart** | Produktionsnahes Deployment ab Werk: `docker compose up`, und er bleibt oben. |
-| **Optionale Bearer-Token-Authentifizierung** am HTTP-Endpunkt | Sichere den Server mit einem gemeinsamen Geheimnis ab, sobald er über localhost hinaus erreichbar ist. |
+| **Bearer-Token-Authentifizierung** am HTTP-Endpunkt | Pflicht, sobald der Server über Loopback hinaus gebunden ist: ohne `MCP_AUTH_TOKEN` verweigert er den Start, statt die API ungeschützt bereitzustellen. |
 | **Eingebautes Rate-Limiting** | Drosselt sich selbst unter dem BuchhaltungsButler-Limit von 100 Anfragen/Kunde/Minute, damit du nie dagegenläufst. |
 | **Deine Zugangsdaten erreichen das Modell nie** | Die Credentials liegen in der Server-Umgebung und werden pro Anfrage injiziert — der Assistent sieht nur Tool-Eingaben und API-Antworten. |
 
@@ -59,7 +59,7 @@ das lässt allerdings einiges liegen:
 | `stdio`-Transport | ✅ | ✅ |
 | **Streamable-HTTP-Transport** | ✅ | ➖ |
 | **Docker + docker-compose**, Health-Check, Auto-Restart | ✅ | ❌ |
-| **Optionale Bearer-Token-Auth** am Endpunkt | ✅ | ❌ |
+| **Erzwungene Bearer-Token-Auth** am Endpunkt | ✅ | ❌ |
 | Credentials serverseitig injiziert, nie ans Modell gesendet | ✅ | ➖ |
 | Lizenz | MIT | unterschiedlich |
 
