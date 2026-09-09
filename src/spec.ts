@@ -9,6 +9,17 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { categoryForPath, type CategoryMeta } from "./categories.js";
 
+/**
+ * Whether a tool call may override the configured BB_API_KEY. Off by default
+ * since 1.1.0; set BB_ALLOW_API_KEY_OVERRIDE=1 to restore the old behaviour.
+ */
+export function apiKeyOverrideAllowed(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return /^(1|true|yes)$/i.test((env.BB_ALLOW_API_KEY_OVERRIDE ?? "").trim());
+}
+
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // spec.json sits at the project root (one level above dist/ at runtime,
 // and is copied next to the compiled output in the Docker image).
@@ -190,14 +201,18 @@ export function buildToolDefs(): ToolDef[] {
       const required: string[] = [];
 
       for (const p of op.parameters ?? []) {
-        // `api_key` is injected by the server from configuration, so it is
-        // exposed as an OPTIONAL override rather than a required field.
+        // `api_key` is injected by the server from configuration. It is only
+        // advertised as an optional override when the operator opted in via
+        // BB_ALLOW_API_KEY_OVERRIDE; otherwise it is not part of the schema at
+        // all, so the model cannot choose which customer to act on.
         if (p.name === "api_key") {
-          properties[p.name] = {
-            type: "string",
-            description:
-              "Optional. The BB customer api_key to act on. Defaults to the BB_API_KEY configured on the server — only set this to target a different customer.",
-          };
+          if (apiKeyOverrideAllowed()) {
+            properties[p.name] = {
+              type: "string",
+              description:
+                "Optional. The BB customer api_key to act on. Defaults to the BB_API_KEY configured on the server — only set this to target a different customer.",
+            };
+          }
           continue;
         }
         properties[p.name] = paramToProperty(p, defs);

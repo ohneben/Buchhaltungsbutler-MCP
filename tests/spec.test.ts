@@ -43,12 +43,27 @@ describe("buildToolDefs", () => {
     }
   });
 
-  it("exposes api_key as an optional override (never required)", () => {
+  it("does not expose api_key at all by default", () => {
     for (const t of tools) {
       expect(t.inputSchema.required ?? []).not.toContain("api_key");
+      expect(t.inputSchema.properties?.api_key).toBeUndefined();
     }
-    const withApiKey = tools.filter((t) => t.inputSchema.properties?.api_key);
-    expect(withApiKey.length).toBeGreaterThan(0);
+  });
+
+  it("exposes api_key as an optional override when explicitly enabled", () => {
+    const prev = process.env.BB_ALLOW_API_KEY_OVERRIDE;
+    process.env.BB_ALLOW_API_KEY_OVERRIDE = "1";
+    try {
+      const opted = buildToolDefs();
+      for (const t of opted) {
+        expect(t.inputSchema.required ?? []).not.toContain("api_key");
+      }
+      const withApiKey = opted.filter((t) => t.inputSchema.properties?.api_key);
+      expect(withApiKey.length).toBeGreaterThan(0);
+    } finally {
+      if (prev === undefined) delete process.env.BB_ALLOW_API_KEY_OVERRIDE;
+      else process.env.BB_ALLOW_API_KEY_OVERRIDE = prev;
+    }
   });
 
   it("fully resolves $ref — none remain in any input schema", () => {
