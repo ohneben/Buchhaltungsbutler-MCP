@@ -412,6 +412,13 @@ zusätzlich ein Docker-Image in der GitHub Container Registry.
 - **Auch auf localhost gilt:** ohne Token wird der `Host`-Header auf localhost-Namen
   begrenzt, damit keine beliebige Webseite den Endpunkt per DNS-Rebinding ansprechen
   kann. Hinter einem Reverse-Proxy setzt du dafür `MCP_ALLOWED_HOSTS`.
+- **Hinter einem Reverse-Proxy** setzt du den `Host`-Header im Proxy am besten fest
+  auf den internen Upstream-Namen und trägst genau diesen in `MCP_ALLOWED_HOSTS`
+  ein. Dann hängt die Prüfung nicht an der öffentlichen Domain und übersteht einen
+  Domainwechsel. (Tipp von [@WinFuture23](https://github.com/WinFuture23).)
+- **`/health` liegt hinter der Host-Prüfung**, aber vor der Token-Prüfung: ein
+  Health-Check der Plattform braucht kein Token. Setzt du `MCP_ALLOWED_HOSTS`,
+  muss der Name, unter dem der Health-Check anfragt, mit in die Liste.
 - Der `api_key` pro Tool-Aufruf ist standardmäßig **deaktiviert**
   (`BB_ALLOW_API_KEY_OVERRIDE=1` schaltet ihn frei), damit das Modell nicht selbst
   entscheiden kann, auf welchen Mandanten geschrieben wird.

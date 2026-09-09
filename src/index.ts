@@ -23,6 +23,7 @@ import {
   loadHttpConfig,
   startupRefusal,
   tokenMatches,
+  weakTokenWarning,
 } from "./http.js";
 
 const transport = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
@@ -47,6 +48,8 @@ async function runHttp(): Promise<void> {
     console.error(refusal);
     process.exit(1);
   }
+  const weak = weakTokenWarning(cfg);
+  if (weak) console.error(`buchhaltungsbutler-mcp: ${weak}`);
   if (!cfg.authToken && cfg.allowInsecure) {
     console.error(
       "buchhaltungsbutler-mcp: WARNING — MCP_ALLOW_INSECURE is set and no " +
@@ -57,21 +60,25 @@ async function runHttp(): Promise<void> {
 
   const app = express();
 
-  // Liveness only, no credentials involved and no body read.
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok", server: "buchhaltungsbutler-mcp" });
-  });
-
   // ---- everything below runs BEFORE the body is read ----
 
-  // 1. DNS-rebinding protection.
+  // 1. DNS-rebinding protection, applied to every route rather than just the
+  //    MCP path: /health was previously reachable with any Host header and
+  //    answered with the server name, which is a free fingerprint.
   const allowlist = hostAllowlist(cfg);
   if (allowlist) {
-    app.use(cfg.path, hostHeaderValidation(allowlist));
+    app.use(hostHeaderValidation(allowlist));
     console.error(
       `buchhaltungsbutler-mcp: Host header restricted to ${allowlist.join(", ")}`
     );
   }
+
+  // Liveness only, no credentials involved and no body read. Deliberately in
+  // front of the auth gate so a platform health check needs no token, but
+  // behind the Host check above.
+  app.get("/health", (_req: Request, res: Response) => {
+    res.json({ status: "ok", server: "buchhaltungsbutler-mcp" });
+  });
 
   // 2. Shared-secret gate. Registered as middleware rather than called inside
   //    the route so an unauthenticated caller is rejected before express.json
