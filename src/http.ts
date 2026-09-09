@@ -18,6 +18,17 @@ export function isLoopbackHost(host: string): boolean {
   return LOOPBACK_HOSTS.has(host.trim().toLowerCase());
 }
 
+/**
+ * `[::1]` is the spelling used everywhere else in this file and in the docs,
+ * but node cannot bind it: listen() fails with ENOTFOUND. Unbracket it rather
+ * than letting the server print "ready" and exit.
+ */
+export function normalizeBindHost(host: string): string {
+  const h = host.trim();
+  const m = /^\[(.+)\]$/.exec(h);
+  return m ? m[1] : h;
+}
+
 function isTruthy(value: string | undefined): boolean {
   return /^(1|true|yes)$/i.test((value ?? "").trim());
 }
@@ -35,9 +46,43 @@ export function positiveNumber(
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+/**
+ * A port must be a whole number in range. `positiveNumber` alone let "0x0DB9"
+ * and "3501.5" through: the first bound a port nobody configured, the second
+ * killed the process inside node's listen(). Railway injects PORT at runtime
+ * and probes that same value, so a silent fallback is the dangerous outcome.
+ */
+export function portNumber(
+  value: string | undefined,
+  fallback: number
+): { port: number; fellBack: boolean } {
+  const raw = (value ?? "").trim();
+  if (!raw) return { port: fallback, fellBack: false };
+  const n = Number(raw);
+  if (Number.isInteger(n) && n >= 1 && n <= 65535) {
+    return { port: n, fellBack: false };
+  }
+  return { port: fallback, fellBack: true };
+}
+
+/**
+ * Entries are compared against `new URL("http://" + host).hostname`, which is
+ * always lowercase and carries no port. An entry with either would therefore
+ * never match, while the startup banner still reported it as configured.
+ */
+export function normalizeAllowedHosts(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .map((s) => (/^\[.*\]$/.test(s) ? s : s.replace(/:\d+$/, "")));
+}
+
 export interface HttpConfig {
   host: string;
   port: number;
+  /** True when PORT was unusable and the fallback was taken. */
+  portFellBack: boolean;
   path: string;
   authToken: string;
   allowedHosts: string[];
@@ -51,14 +96,14 @@ export function loadHttpConfig(
   env: NodeJS.ProcessEnv = process.env
 ): HttpConfig {
   return {
-    host: env.HOST || "0.0.0.0",
-    port: positiveNumber(env.PORT, 3000),
+    host: normalizeBindHost(env.HOST || "0.0.0.0"),
+    ...(() => {
+      const p = portNumber(env.PORT, 3000);
+      return { port: p.port, portFellBack: p.fellBack };
+    })(),
     path: env.MCP_HTTP_PATH || "/mcp",
     authToken: env.MCP_AUTH_TOKEN || "",
-    allowedHosts: (env.MCP_ALLOWED_HOSTS ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    allowedHosts: normalizeAllowedHosts(env.MCP_ALLOWED_HOSTS),
     allowInsecure: isTruthy(env.MCP_ALLOW_INSECURE),
     sessionTtlMs: positiveNumber(env.MCP_SESSION_TTL, 1800) * 1000,
     maxSessions: positiveNumber(env.MCP_MAX_SESSIONS, 256),
@@ -67,10 +112,11 @@ export function loadHttpConfig(
 }
 
 /**
- * A server reachable from outside this machine must require a token. Binding
- * to 0.0.0.0 is normal and necessary inside a container, so the check is on
- * the missing token, not on the bind address itself — the container's port
- * publication is what decides who can reach it.
+ * A server reachable from outside this machine must require a token. The check
+ * looks at the bind address: a loopback bind is unreachable from elsewhere, so
+ * it needs no token, and anything else does. Binding 0.0.0.0 is normal and
+ * necessary inside a container, which is why MCP_ALLOW_INSECURE exists for the
+ * case where the port genuinely is not published.
  *
  * Returns an error message when the server must refuse to start.
  */
@@ -88,8 +134,10 @@ export function startupRefusal(cfg: HttpConfig): string | undefined {
     `  1. Set MCP_AUTH_TOKEN to a long random string (recommended):\n` +
     `       MCP_AUTH_TOKEN=$(openssl rand -hex 32)\n` +
     `     Clients then send: Authorization: Bearer <token>\n` +
-    `  2. Bind to loopback only, and publish the container port as\n` +
-    `     "127.0.0.1:3000:3000" so the host, not the container, limits reach.\n` +
+    `  2. Outside a container: bind loopback with HOST=127.0.0.1.\n` +
+    `     Inside one this does NOT work - docker forwards a published port to\n` +
+    `     the container's eth0, never to its loopback, so the container would\n` +
+    `     look healthy and be unreachable. In a container use option 1 or 3.\n` +
     `  3. If this endpoint genuinely is not reachable by anyone else (an\n` +
     `     isolated private network), set MCP_ALLOW_INSECURE=1 to override.`
   );
@@ -161,6 +209,12 @@ export function healthHostAllowlist(cfg: HttpConfig): string[] | undefined {
 export function hostAllowlist(cfg: HttpConfig): string[] | undefined {
   if (cfg.allowedHosts.length) return cfg.allowedHosts;
   if (isLoopbackHost(cfg.host)) return [...LOOPBACK_ALLOWLIST];
+  // MCP_ALLOW_INSECURE waives the token, so there is no first layer left.
+  // Dropping the Host check as well would hand any web page the operator
+  // visits a working DNS-rebinding target against every tool, including the
+  // destructive ones. Fall back to loopback names; MCP_ALLOWED_HOSTS is the
+  // way to widen it deliberately.
+  if (!cfg.authToken) return [...LOOPBACK_ALLOWLIST];
   return undefined;
 }
 

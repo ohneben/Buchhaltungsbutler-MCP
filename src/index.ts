@@ -50,6 +50,13 @@ async function runHttp(): Promise<void> {
     console.error(refusal);
     process.exit(1);
   }
+  if (cfg.portFellBack) {
+    console.error(
+      `buchhaltungsbutler-mcp: WARNING - PORT=${process.env.PORT} is not a ` +
+        `usable port number, falling back to ${cfg.port}. A platform that ` +
+        `injects PORT will probe the value it injected, not this one.`
+    );
+  }
   const weak = weakTokenWarning(cfg);
   if (weak) console.error(`buchhaltungsbutler-mcp: ${weak}`);
   if (!cfg.authToken && cfg.allowInsecure) {
@@ -69,6 +76,19 @@ async function runHttp(): Promise<void> {
   //    MCP_ALLOWED_HOSTS is pinned to a public hostname.
   const allowlist = hostAllowlist(cfg);
   const healthAllowlist = healthHostAllowlist(cfg);
+
+  // Anything that is neither /health nor the MCP path is terminated here,
+  // before a body is read. This route used to fall through to express's HTML
+  // 404 *after* the global json parser had buffered and parsed up to the body
+  // limit, so an unauthenticated caller could exhaust memory on any path that
+  // was not /mcp.
+  const notFound = (_req: Request, res: Response): void => {
+    res.status(404).json({
+      jsonrpc: "2.0",
+      error: { code: -32601, message: `Not found. MCP endpoint is ${cfg.path}` },
+      id: null,
+    });
+  };
 
   // Liveness only, no credentials involved and no body read. Deliberately in
   // front of the auth gate so a platform health check needs no token.
@@ -107,8 +127,10 @@ async function runHttp(): Promise<void> {
     });
   }
 
-  // 3. Only now is it worth parsing a body.
-  app.use(express.json({ limit: cfg.bodyLimit }));
+  // 3. Only now is it worth parsing a body, and only on the MCP path. Mounted
+  //    globally it ran for every request, including ones no route would ever
+  //    serve, and ahead of the auth gate for all of them.
+  app.use(cfg.path, express.json({ limit: cfg.bodyLimit }));
 
   // Streamable HTTP with session management: `initialize` creates a session and
   // its server/transport are reused for that session's later requests. This is
@@ -254,6 +276,9 @@ async function runHttp(): Promise<void> {
   app.get(cfg.path, bySession);
   app.delete(cfg.path, bySession);
 
+  // Anything no route above served stops here, having read no body.
+  app.use(notFound);
+
   // Without this, a malformed or oversized body reaches express's default
   // handler, which answers with an HTML page carrying a stack trace and
   // absolute file paths whenever NODE_ENV is not "production".
@@ -278,11 +303,32 @@ async function runHttp(): Promise<void> {
     }
   );
 
-  app.listen(cfg.port, cfg.host, () => {
+  const server = app.listen(cfg.port, cfg.host, () => {
+    // Only claim readiness once the socket is actually listening. express
+    // invokes this callback even when the bind failed, so without the check
+    // and the error handler below a failed start printed "ready" and exited 0:
+    // on a platform that reads exit codes that is a deployment reported as
+    // finished, with nothing listening and no restart.
+    if (!server.listening) return;
     console.error(
       `buchhaltungsbutler-mcp: HTTP transport ready on http://${cfg.host}:${cfg.port}${cfg.path}` +
         (cfg.authToken ? " (bearer auth enabled)" : " (NO AUTH)")
     );
+  });
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    const hint =
+      err.code === "EADDRINUSE"
+        ? ` Port ${cfg.port} is already in use.`
+        : err.code === "EACCES"
+          ? ` No permission to bind port ${cfg.port}.`
+          : err.code === "ENOTFOUND" || err.code === "EADDRNOTAVAIL"
+            ? ` HOST=${cfg.host} is not an address this machine can bind.`
+            : "";
+    console.error(
+      `Fatal: could not listen on ${cfg.host}:${cfg.port}.${hint} (${err.code ?? err.message})`
+    );
+    process.exit(1);
   });
 }
 

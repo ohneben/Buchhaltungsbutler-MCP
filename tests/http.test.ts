@@ -65,11 +65,25 @@ describe("hostAllowlist", () => {
     ).toEqual(["mcp.example.com", "localhost"]);
   });
 
-  it("leaves a non-loopback bind unchecked, so a reverse proxy needs no config", () => {
+  it("leaves a token-protected non-loopback bind unchecked, so a reverse proxy needs no config", () => {
     expect(
       hostAllowlist(base({ HOST: "0.0.0.0", MCP_AUTH_TOKEN: "t" }))
     ).toBeUndefined();
-    expect(hostAllowlist(base({ HOST: "::" }))).toBeUndefined();
+    expect(hostAllowlist(base({ HOST: "::", MCP_AUTH_TOKEN: "t" }))).toBeUndefined();
+  });
+
+  it("falls back to loopback names when there is no token at all", () => {
+    // Only reachable via MCP_ALLOW_INSECURE. Waiving the token removes the
+    // first layer; dropping the Host check too would hand any page the
+    // operator visits a working rebinding target against the destructive
+    // tools. An explicit MCP_ALLOWED_HOSTS is the way to widen it.
+    for (const host of ["0.0.0.0", "::", "192.168.0.10"]) {
+      expect(hostAllowlist(base({ HOST: host }))).toEqual([
+        "localhost",
+        "127.0.0.1",
+        "[::1]",
+      ]);
+    }
   });
 
   it("restricts a token-less loopback server to localhost names", () => {

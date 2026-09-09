@@ -110,8 +110,8 @@ Server-Umgebung — das Modell sieht sie nie und fasst sie nie an.
 ```bash
 cp .env.example .env
 # .env bearbeiten → BB_API_CLIENT, BB_API_SECRET, BB_API_KEY setzen
-#                 → MCP_AUTH_TOKEN setzen (Pflicht, sobald der Port über
-#                   127.0.0.1 hinaus veröffentlicht wird):
+#                 → MCP_AUTH_TOKEN setzen. PFLICHT, sonst startet der Server
+#                   nicht, denn .env.example bindet auf 0.0.0.0:
 #                   openssl rand -hex 32
 ```
 
@@ -147,7 +147,8 @@ hinzugefügt (Einstellungen → Connectors) oder lokal mit
 }
 ```
 
-(Die `--header`-Zeile entfällt, wenn du `MCP_AUTH_TOKEN` leer gelassen hast.)
+(Die `--header`-Zeile entfällt nur, wenn du ohne Token auf Loopback bindest.
+Im Docker-Schnellstart oben ist das Token Pflicht.)
 
 ### Lieber ein fertiges Image?
 
@@ -416,6 +417,11 @@ zusätzlich ein Docker-Image in der GitHub Container Registry.
   auf den internen Upstream-Namen und trägst genau diesen in `MCP_ALLOWED_HOSTS`
   ein. Dann hängt die Prüfung nicht an der öffentlichen Domain und übersteht einen
   Domainwechsel. (Tipp von [@WinFuture23](https://github.com/WinFuture23).)
+- **Setzt du `MCP_ALLOWED_HOSTS` und hat deine Plattform einen HTTP-Health-Check,
+  muss dessen Hostname mit in die Liste.** Railway sendet
+  `Host: healthcheck.railway.app`, Kubernetes-Probes fragen je nach Konfiguration
+  über die Container-IP an. Fehlt der Name, bekommt der Health-Check eine 403 und
+  die Plattform wertet das Deployment als kaputt.
 - **`/health` liegt hinter der Host-Prüfung**, aber vor der Token-Prüfung: ein
   Health-Check der Plattform braucht kein Token. Zusätzlich akzeptiert `/health`
   **immer** `localhost`, `127.0.0.1` und `[::1]`, damit der `HEALTHCHECK` aus dem

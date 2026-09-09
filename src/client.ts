@@ -11,6 +11,7 @@
  */
 
 import { apiKeyOverrideAllowed, specInfo } from "./spec.js";
+import { positiveNumber } from "./http.js";
 
 export interface BBConfig {
   apiClient: string;
@@ -26,7 +27,10 @@ export function loadConfig(): BBConfig {
   const apiSecret = process.env.BB_API_SECRET ?? "";
   const apiKey = process.env.BB_API_KEY ?? "";
   const baseUrl = process.env.BB_BASE_URL || specInfo().baseUrl;
-  const rateLimit = Number(process.env.BB_RATE_LIMIT || "90");
+  // Not a bare Number(): BB_RATE_LIMIT=0 made RateLimiter.take() compute a NaN
+  // delay and recurse forever, hanging every tool call and holding its session
+  // open; "abc" disabled the limiter entirely and blew past BB's 100/min cap.
+  const rateLimit = positiveNumber(process.env.BB_RATE_LIMIT, 90);
 
   const missing = [
     !apiClient && "BB_API_CLIENT",
