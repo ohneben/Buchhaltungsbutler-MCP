@@ -17,13 +17,13 @@
 
 #### Paketkennungen
 
-Dieser Server hat eigene Kennungen. Was anders heisst, gehoert nicht dazu:
+Dieser Server hat eigene Kennungen. Was anders heißt, gehört nicht dazu:
 
 | Wo | Kennung |
 |---|---|
 | MCP-Register | `io.github.ohneben/buchhaltungsbutler-mcp` |
 | Container (GHCR) | `ghcr.io/ohneben/buchhaltungsbutler-mcp` |
-| npm | `@ohneben/buchhaltungsbutler-mcp` (noch nicht veroeffentlicht) |
+| npm | `@ohneben/buchhaltungsbutler-mcp` (noch nicht veröffentlicht) |
 
 Das npm-Paket `buchhaltungsbutler-mcp` ohne Scope ist ein anderes Projekt eines
 anderen Autors ([mrvnklm/buchhaltungsbutler-mcp](https://github.com/mrvnklm/buchhaltungsbutler-mcp))
@@ -216,26 +216,26 @@ Nach Änderungen an `.env` neu laden mit `docker compose up -d --force-recreate`
 
 ## Toolnamen
 
-Jedes Tool heisst `<ressource>_<verb>`. Die Verben sind fest: `list`, `get`,
+Jedes Tool heißt `<ressource>_<verb>`. Die Verben sind fest: `list`, `get`,
 `create`, `update`, `delete`, `upload`, `assign`, `unassign`, `unconfirm`,
-`restore`, `cancel`. Damit heisst dieselbe Sache ueberall gleich, unabhaengig
+`restore`, `cancel`. Damit heißt dieselbe Sache überall gleich, unabhängig
 davon, wie der jeweilige BB-Pfad geschrieben ist (die API mischt `add` und
 `create`, und zwei Batch-Pfade sind camelCase).
 
-Anlegen geht immer ueber ein Tool, das eine Liste nimmt. `receipts_create`
+Anlegen geht immer über ein Tool, das eine Liste nimmt. `receipts_create`
 legt einen Beleg oder hundert an, ein einzelner Datensatz ist eine Liste mit
-einem Eintrag. Deshalb gibt es 46 Tools fuer 54 Endpunkte: acht
-Einzel-Endpunkte sind in ihrem Batch-Gegenstueck aufgegangen.
+einem Eintrag. Deshalb gibt es 46 Tools für 54 Endpunkte: acht
+Einzel-Endpunkte sind in ihrem Batch-Gegenstück aufgegangen.
 
 ### Alte Namen bleiben aufrufbar
 
 Die Namen bis 1.1.1 funktionieren weiter. Sie stehen nicht mehr im Katalog,
-werden aber beim Aufruf aufgeloest, damit fest verdrahtete Aufrufe aus
-aelteren Releases nicht ins Leere laufen. Ein Aufruf von `receipts_add` mit
+werden aber beim Aufruf aufgelöst, damit fest verdrahtete Aufrufe aus
+älteren Releases nicht ins Leere laufen. Ein Aufruf von `receipts_add` mit
 Einzelfeldern landet weiterhin auf `/receipts/add`.
 
-`BB_READ_ONLY` und `BB_TOOL_ALLOWLIST` greifen vorher: ueber einen alten Namen
-laesst sich kein Tool erreichen, das die Policy ausschliesst.
+`BB_READ_ONLY` und `BB_TOOL_ALLOWLIST` greifen vorher: über einen alten Namen
+lässt sich kein Tool erreichen, das die Policy ausschließt.
 
 | Alt (bis 1.1.1) | Neu |
 |---|---|
@@ -250,31 +250,31 @@ laesst sich kein Tool erreichen, das die Policy ausschliesst.
 | `postings_add_free`, `postings_add_batch_free` | `postings_create_free` |
 | `transactions_assign_receipt`, `transactions_assign_batch_receipt` | `transactions_assign_receipts` |
 
-Die vollstaendige Zuordnung steht in [`src/naming.ts`](src/naming.ts).
+Die vollständige Zuordnung steht in [`src/naming.ts`](src/naming.ts).
 
 ## Sicherheitskategorien der Tools
 
-Jede Tool-Beschreibung beginnt mit einem dieser Banner und traegt die passenden
+Jede Tool-Beschreibung beginnt mit einem dieser Banner und trägt die passenden
 [MCP-Annotationen](https://modelcontextprotocol.io/docs/concepts/tools#tool-annotations):
 
 | Banner | Anzahl | `readOnlyHint` | `destructiveHint` | Bedeutung |
 |---|---|---|---|---|
-| 🟢 **READ-ONLY** | 15 | `true` | `false` | Ruft nur Daten ab. Ungefaehrlich. |
-| 🟡 **WRITE · legt Daten an** | 17 | `false` | `false` | Erzeugt Datensaetze (nicht idempotent, mehrfach aufgerufen entstehen Duplikate). |
-| 🟡 **WRITE · aendert Daten** | 4 | `false` | `false` | Aendert bestehende Stammdaten direkt. |
-| 🟡 **WRITE · verknuepft/loest** | 3 | `false` | `false` | Ordnet Beleg und Transaktion zu bzw. hebt die Zuordnung auf. Umkehrbar. |
-| 🟡 **WRITE · nimmt Zustand zurueck** | 4 | `false` | `false` | Setzt Buchungen auf unbestaetigt / stellt Belege wieder her. Umkehrbar. |
-| 🔴 **DESTRUCTIVE · loescht** | 3 | `false` | `true` | Loescht oder storniert einen Datensatz. Vorher bestaetigen lassen. |
+| 🟢 **READ-ONLY** | 15 | `true` | `false` | Ruft nur Daten ab. Ungefährlich. |
+| 🟡 **WRITE · legt Daten an** | 17 | `false` | `false` | Erzeugt Datensätze (nicht idempotent, mehrfach aufgerufen entstehen Duplikate). |
+| 🟡 **WRITE · ändert Daten** | 4 | `false` | `false` | Aendert bestehende Stammdaten direkt. |
+| 🟡 **WRITE · verknüpft/löst** | 3 | `false` | `false` | Ordnet Beleg und Transaktion zu bzw. hebt die Zuordnung auf. Umkehrbar. |
+| 🟡 **WRITE · nimmt Zustand zurück** | 4 | `false` | `false` | Setzt Buchungen auf unbestätigt / stellt Belege wieder her. Umkehrbar. |
+| 🔴 **DESTRUCTIVE · löscht** | 3 | `false` | `true` | Löscht oder storniert einen Datensatz. Vorher bestätigen lassen. |
 
-Hosts, die Annotationen respektieren (Claude gehoert dazu), koennen fuer
-`destructiveHint`-Tools eine Bestaetigung verlangen und `readOnlyHint`-Tools
+Hosts, die Annotationen respektieren (Claude gehört dazu), können für
+`destructiveHint`-Tools eine Bestätigung verlangen und `readOnlyHint`-Tools
 automatisch vertrauen.
 
-Jedes Tool bringt zusaetzlich ein `outputSchema` mit, also die Form der
+Jedes Tool bringt zusätzlich ein `outputSchema` mit, also die Form der
 Erfolgsantwort. Erfolgreiche Aufrufe liefern die Antwort deshalb nicht nur als
 Text, sondern auch als `structuredContent`.
 
-> Mit `npm run list-tools` (ohne Zugangsdaten) laesst sich der vollstaendige
+> Mit `npm run list-tools` (ohne Zugangsdaten) lässt sich der vollständige
 > Katalog jederzeit ausgeben.
 
 <details>
@@ -327,45 +327,45 @@ Einzelfeldern, geht er an den Einzel-Endpunkt.
 </details>
 
 <details>
-<summary><strong>🟡 WRITE · aendert (4) · verknuepft (3) · nimmt zurueck (4)</strong></summary>
+<summary><strong>🟡 WRITE · ändert (4) · verknüpft (3) · nimmt zurück (4)</strong></summary>
 
 | Tool | Endpunkt | Unterkategorie |
 |---|---|---|
-| `cost_locations_update` | `POST /cost-locations/update` | aendert |
-| `creditors_update` | `POST /settings/update/creditor` | aendert |
-| `debtors_update` | `POST /settings/update/debtor` | aendert |
-| `postingaccounts_update` | `POST /settings/update/postingaccount` | aendert |
-| `postings_assign_receipt_to_free` | `POST /postings/assign/receipt-to-free-posting` | verknuepft |
-| `transactions_assign_receipts` | `POST /transactions/assign-batch/receipt` | verknuepft |
-| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | verknuepft |
-| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | nimmt zurueck |
-| `postings_unconfirm_for_receipt` | `POST /postings/unconfirm/receipt` | nimmt zurueck |
-| `postings_unconfirm_for_transaction` | `POST /postings/unconfirm/transaction` | nimmt zurueck |
-| `receipts_restore` | `POST /receipts/restore/id_by_customer` | nimmt zurueck |
+| `cost_locations_update` | `POST /cost-locations/update` | ändert |
+| `creditors_update` | `POST /settings/update/creditor` | ändert |
+| `debtors_update` | `POST /settings/update/debtor` | ändert |
+| `postingaccounts_update` | `POST /settings/update/postingaccount` | ändert |
+| `postings_assign_receipt_to_free` | `POST /postings/assign/receipt-to-free-posting` | verknüpft |
+| `transactions_assign_receipts` | `POST /transactions/assign-batch/receipt` | verknüpft |
+| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | verknüpft |
+| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | nimmt zurück |
+| `postings_unconfirm_for_receipt` | `POST /postings/unconfirm/receipt` | nimmt zurück |
+| `postings_unconfirm_for_transaction` | `POST /postings/unconfirm/transaction` | nimmt zurück |
+| `receipts_restore` | `POST /receipts/restore/id_by_customer` | nimmt zurück |
 </details>
 
 <details>
-<summary><strong>🔴 DESTRUCTIVE · loescht (3)</strong></summary>
+<summary><strong>🔴 DESTRUCTIVE · löscht (3)</strong></summary>
 
 | Tool | Endpunkt | Hinweis |
 |---|---|---|
-| `receipts_delete` | `POST /receipts/delete/id_by_customer` | Wiederherstellbar ueber `receipts_restore` |
+| `receipts_delete` | `POST /receipts/delete/id_by_customer` | Wiederherstellbar über `receipts_restore` |
 | `cost_locations_delete` | `POST /cost-locations/delete` | **Nicht** wiederherstellbar |
-| `postings_cancel` | `POST /postings/cancel` | Noch nicht festgeschriebene Buchungen werden geloescht; festgeschriebene werden durch eine Stornobuchung ausgeglichen |
+| `postings_cancel` | `POST /postings/cancel` | Noch nicht festgeschriebene Buchungen werden gelöscht; festgeschriebene werden durch eine Stornobuchung ausgeglichen |
 </details>
 
 ### Was die v1-API nicht kann
 
-Diese Luecken stehen absichtlich auch in den Tool-Beschreibungen, damit das
+Diese Lücken stehen absichtlich auch in den Tool-Beschreibungen, damit das
 Modell nicht nach einem Endpunkt sucht, den es nicht gibt:
 
 | Ressource | Fehlt |
 |---|---|
-| Kreditoren, Debitoren, Buchungskonten | kein Loeschen |
-| Konten (`accounts`) | kein Aendern, kein Loeschen |
-| Kommentare | kein Lesen, kein Aendern, kein Loeschen |
+| Kreditoren, Debitoren, Buchungskonten | kein Löschen |
+| Konten (`accounts`) | kein Aendern, kein Löschen |
+| Kommentare | kein Lesen, kein Aendern, kein Löschen |
 | Rechnungen | kein Lesen, kein Aendern, kein Stornieren |
-| Transaktionen | kein Aendern, kein Loeschen |
+| Transaktionen | kein Aendern, kein Löschen |
 
 ## Aus dem Quellcode starten (stdio, ohne Docker)
 
