@@ -1,7 +1,7 @@
 {
   "name": "@ohneben/buchhaltungsbutler-mcp",
   "version": "1.1.1",
-  "description": "Model Context Protocol server for the BuchhaltungsButler API (v1). Exposes all 54 endpoints as categorized MCP tools (read-only / write / destructive).",
+  "description": "Model Context Protocol server for the BuchhaltungsButler API (v1). Covers all 54 endpoints as 46 categorized MCP tools (read-only / write / destructive).",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -13,6 +13,9 @@
   ],
   "license": "MIT",
   "author": "ohneben",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ohneben/Buchhaltungsbutler-MCP.git"
