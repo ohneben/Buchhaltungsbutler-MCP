@@ -13,15 +13,17 @@ describe("specInfo", () => {
 });
 
 describe("buildToolDefs", () => {
-  it("generates exactly 54 tools", () => {
-    expect(tools).toHaveLength(54);
+  it("generates exactly 46 tools", () => {
+    // 54 endpoints, eight of which are the single-record half of a batch
+    // pair and are exposed through the batch tool instead.
+    expect(tools).toHaveLength(46);
   });
 
   it("gives every tool an MCP-valid name, and names are unique", () => {
     const names = tools.map((t) => t.name);
-    // MCP tool names allow [A-Za-z0-9_-]; two batch endpoints keep the
-    // spec's camelCase (`receipts_addBatch`, `transactions_addBatch`).
-    for (const n of names) expect(n).toMatch(/^[A-Za-z0-9_-]+$/);
+    // Curated names are lower snake_case throughout, so none of the spec's
+    // camelCase (`/receipts/addBatch`) leaks into the MCP surface.
+    for (const n of names) expect(n).toMatch(/^[a-z][a-z0-9_]*$/);
     expect(new Set(names).size).toBe(names.length);
   });
 
@@ -79,8 +81,8 @@ describe("buildToolDefs", () => {
     }
   });
 
-  it("marks required params (receipts_get needs list_direction)", () => {
-    const t = tools.find((x) => x.name === "receipts_get");
+  it("marks required params (receipts_list needs list_direction)", () => {
+    const t = tools.find((x) => x.name === "receipts_list");
     expect(t).toBeDefined();
     expect(t!.inputSchema.required).toContain("list_direction");
   });

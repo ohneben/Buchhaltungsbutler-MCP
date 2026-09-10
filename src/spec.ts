@@ -1,13 +1,21 @@
 /**
  * Loads the bundled BuchhaltungsButler OpenAPI (Swagger 2.0) spec and turns
- * each path into a fully-formed MCP tool definition: a snake_case name, a
- * JSON-Schema input, the category banner, and MCP annotations.
+ * each path into a fully-formed MCP tool definition: a curated snake_case
+ * name, a JSON-Schema input, a JSON-Schema output, the category banner, usage
+ * guidance, and MCP annotations.
  */
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { categoryForPath, type CategoryMeta } from "./categories.js";
+import { GUIDANCE } from "./guidance.js";
+import {
+  ABSORBED_PATHS,
+  MERGED_PATHS,
+  TOOL_NAMES,
+  legacyToolName,
+} from "./naming.js";
 
 /**
  * Whether a tool call may override the configured BB_API_KEY. Off by default
@@ -38,11 +46,17 @@ interface SwaggerParam {
   schema?: JsonSchema;
 }
 
+interface SwaggerResponse {
+  description?: string;
+  schema?: JsonSchema;
+}
+
 interface SwaggerOperation {
   summary?: string;
   description?: string;
   tags?: string[];
   parameters?: SwaggerParam[];
+  responses?: Record<string, SwaggerResponse>;
 }
 
 interface SwaggerSpec {
@@ -73,7 +87,16 @@ export interface ToolDef {
   /** Full description shown to the model, including the category banner. */
   description: string;
   inputSchema: JsonSchema;
+  /** Shape of a successful response, from the spec's 200 schema. */
+  outputSchema: JsonSchema;
   title: string;
+  /**
+   * Set on merged batch tools. `path` is the batch endpoint; a call that
+   * arrives with the single-record fields instead of `batchParam` is routed
+   * to `singlePath` so pre-merge callers keep working.
+   */
+  singlePath?: string;
+  batchParam?: string;
 }
 
 let _spec: SwaggerSpec | null = null;
@@ -89,19 +112,11 @@ export function specInfo(): { title: string; version: string; baseUrl: string } 
   return { title: s.info.title, version: s.info.version, baseUrl: s.basePath };
 }
 
-/** `/postings/add-batch/free` -> `postings_add_batch_free` */
-function toToolName(path: string): string {
-  return path
-    .replace(/^\//, "")
-    .replace(/[/-]/g, "_")
-    .replace(/__+/g, "_");
-}
-
-/** `/transactions/get/id_by_customer` -> `Transactions: get by customer id` */
+/** `/receipts/get/id_by_customer` -> `Receipts: get receipt by id_by_customer` */
 function toTitle(path: string, op: SwaggerOperation): string {
   const tag = op.tags?.[0] ?? "";
   const summary = (op.summary || "").trim();
-  return summary ? `${tag}: ${summary}` : toToolName(path);
+  return summary ? `${tag}: ${summary}` : legacyToolName(path);
 }
 
 /** Strip the HTML the BB docs embed in descriptions down to readable text. */
@@ -153,6 +168,63 @@ function resolveSchema(
   return out;
 }
 
+/**
+ * Drop `required` entries that name a property the schema does not declare.
+ * The upstream spec has a few of these (the batch free-posting item requires
+ * "amounts" while the field is called "amount"), and advertising a constraint
+ * no valid payload can satisfy sends the model chasing a field that does not
+ * exist.
+ */
+function dropPhantomRequired(schema: JsonSchema): JsonSchema {
+  if (schema.required && schema.properties) {
+    const known = new Set(Object.keys(schema.properties));
+    const kept = schema.required.filter((r) => known.has(r));
+    if (kept.length) schema.required = kept;
+    else delete schema.required;
+  }
+  if (schema.items) dropPhantomRequired(schema.items);
+  if (schema.properties) {
+    for (const v of Object.values(schema.properties)) dropPhantomRequired(v);
+  }
+  return schema;
+}
+
+/**
+ * Remove `enum` from a response schema. The spec uses enums there to carry
+ * sample values ("receipt123", a single-element rows count), not real
+ * constraints, so copying them into an output schema would describe every
+ * real response as invalid.
+ */
+function stripResponseEnums(schema: JsonSchema): JsonSchema {
+  delete schema.enum;
+  if (schema.items) stripResponseEnums(schema.items);
+  if (schema.properties) {
+    for (const v of Object.values(schema.properties)) stripResponseEnums(v);
+  }
+  return schema;
+}
+
+/**
+ * Copy parameter descriptions onto identically named fields of a batch item
+ * schema. Several batch definitions carry examples but no prose, while their
+ * single-record twin documents every field. Only matching names are touched,
+ * never renamed: the batch endpoint's own field names stay authoritative
+ * (`/postings/add-batch/receipts` really does spell it `postingstexts`).
+ */
+function enrichItemSchema(
+  itemSchema: JsonSchema,
+  singleParams: SwaggerParam[]
+): void {
+  const props = itemSchema.properties;
+  if (!props) return;
+  for (const p of singleParams) {
+    const target = props[p.name];
+    if (target && !target.description && p.description) {
+      target.description = cleanDescription(p.description);
+    }
+  }
+}
+
 /** Build the JSON-Schema property for a single Swagger parameter. */
 function paramToProperty(
   p: SwaggerParam,
@@ -186,6 +258,60 @@ function paramToProperty(
   return prop;
 }
 
+/** The 200 response schema, cleaned up for use as an MCP output schema. */
+function buildOutputSchema(
+  op: SwaggerOperation,
+  defs: Record<string, JsonSchema>
+): JsonSchema {
+  const ok = op.responses?.["200"];
+  const resolved = ok?.schema
+    ? stripResponseEnums(resolveSchema(ok.schema, defs))
+    : {};
+  if (resolved.type !== "object" || !resolved.properties) {
+    // Every v1 endpoint answers with a {success, ...} envelope; fall back to
+    // that rather than declaring an output schema nothing can satisfy.
+    return {
+      type: "object",
+      properties: {
+        success: { type: "boolean", description: "Whether the call succeeded." },
+        message: { type: "string" },
+      },
+      required: ["success"],
+    };
+  }
+  resolved.required = ["success"];
+  return resolved;
+}
+
+/** Assemble the description the model reads. */
+function buildDescription(args: {
+  category: CategoryMeta;
+  op: SwaggerOperation;
+  guidance?: { use: string; avoid?: string; note?: string };
+  batch?: { param: string; itemLabel: string };
+  path: string;
+}): string {
+  const { category, op, guidance, batch, path } = args;
+  const summary = cleanDescription(op.summary);
+  const longDesc = cleanDescription(op.description);
+
+  const parts: string[] = [`${category.banner}: ${category.blurb}`];
+  if (summary) parts.push(`**${summary}**`);
+  if (longDesc && longDesc.toLowerCase() !== summary.toLowerCase())
+    parts.push(longDesc);
+  if (guidance?.use) parts.push(guidance.use);
+  if (guidance?.avoid) parts.push(guidance.avoid);
+  if (batch) {
+    parts.push(
+      `Takes one or many: pass an array of ${batch.itemLabel} in \`${batch.param}\`. A single record is an array of one.`
+    );
+  }
+  if (guidance?.note) parts.push(guidance.note);
+  parts.push(`Endpoint: POST ${path}`);
+
+  return parts.filter(Boolean).join("\n\n");
+}
+
 /** Generate the complete, ordered list of MCP tool definitions. */
 export function buildToolDefs(): ToolDef[] {
   const s = spec();
@@ -193,9 +319,20 @@ export function buildToolDefs(): ToolDef[] {
   const tools: ToolDef[] = [];
 
   for (const path of Object.keys(s.paths)) {
+    // Single-record endpoints that a batch tool absorbed are still callable,
+    // they just do not get a tool entry of their own.
+    if (ABSORBED_PATHS.has(path)) continue;
+
     const methods = s.paths[path];
     for (const method of Object.keys(methods)) {
       const op = methods[method];
+      const merge = MERGED_PATHS[path];
+      const singleOp = merge
+        ? Object.values(s.paths[merge.singlePath])[0]
+        : undefined;
+      const singleParams = (singleOp?.parameters ?? []).filter(
+        (p) => p.name !== "api_key"
+      );
       const category = categoryForPath(path);
       const properties: Record<string, JsonSchema> = {};
       const required: string[] = [];
@@ -210,7 +347,7 @@ export function buildToolDefs(): ToolDef[] {
             properties[p.name] = {
               type: "string",
               description:
-                "Optional. The BB customer api_key to act on. Defaults to the BB_API_KEY configured on the server — only set this to target a different customer.",
+                "Optional. The BB customer api_key to act on. Defaults to the BB_API_KEY configured on the server. Only set this to target a different customer.",
             };
           }
           continue;
@@ -219,35 +356,44 @@ export function buildToolDefs(): ToolDef[] {
         if (p.required) required.push(p.name);
       }
 
-      const inputSchema: JsonSchema = {
+      if (merge) {
+        const arr = properties[merge.param];
+        if (arr?.items) enrichItemSchema(arr.items, singleParams);
+      }
+
+      const inputSchema = dropPhantomRequired({
         type: "object",
         properties,
         ...(required.length ? { required } : {}),
         additionalProperties: false,
-      };
+      });
 
-      const banner = `${category.banner} — ${category.blurb}`;
-      const summary = cleanDescription(op.summary);
-      const longDesc = cleanDescription(op.description);
-      const description = [
-        banner,
-        "",
-        summary && `**${summary}**`,
-        longDesc && longDesc !== summary ? longDesc : "",
-        `\nEndpoint: POST ${path}`,
-      ]
-        .filter((x) => x !== undefined && x !== "")
-        .join("\n");
+      // For a merged tool the single-record endpoint carries the better prose
+      // (the batch summary is a bare "add batch receipts"), so describe the
+      // capability from that and explain the array shape separately.
+      const describedOp = singleOp ?? op;
 
       tools.push({
-        name: toToolName(path),
+        name: TOOL_NAMES[path],
         path,
         method: method.toUpperCase(),
         tag: op.tags?.[0] ?? "Other",
         category,
-        description,
+        description: buildDescription({
+          category,
+          op: describedOp,
+          guidance: GUIDANCE[path],
+          batch: merge
+            ? { param: merge.param, itemLabel: merge.param.replace(/_/g, " ") }
+            : undefined,
+          path,
+        }),
         inputSchema,
-        title: toTitle(path, op),
+        outputSchema: buildOutputSchema(op, defs),
+        title: toTitle(path, describedOp),
+        ...(merge
+          ? { singlePath: merge.singlePath, batchParam: merge.param }
+          : {}),
       });
     }
   }

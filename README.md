@@ -15,14 +15,29 @@
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/ohneben/buchhaltungsbutler-mcp)
 [![Buchhaltungsbutler-MCP MCP server](https://glama.ai/mcp/servers/ohneben/Buchhaltungsbutler-MCP/badges/score.svg)](https://glama.ai/mcp/servers/ohneben/Buchhaltungsbutler-MCP)
 
+#### Paketkennungen
+
+Dieser Server hat eigene Kennungen. Was anders heisst, gehoert nicht dazu:
+
+| Wo | Kennung |
+|---|---|
+| MCP-Register | `io.github.ohneben/buchhaltungsbutler-mcp` |
+| Container (GHCR) | `ghcr.io/ohneben/buchhaltungsbutler-mcp` |
+| npm | `@ohneben/buchhaltungsbutler-mcp` (noch nicht veroeffentlicht) |
+
+Das npm-Paket `buchhaltungsbutler-mcp` ohne Scope ist ein anderes Projekt eines
+anderen Autors ([mrvnklm/buchhaltungsbutler-mcp](https://github.com/mrvnklm/buchhaltungsbutler-mcp))
+und hat mit diesem hier nichts zu tun. Verzeichnisse, die von dieser Seite
+dorthin verlinken, verlinken auf das falsche Paket.
+
 Verwalte deine [BuchhaltungsButler](https://www.buchhaltungsbutler.de/)-Buchhaltung in
 natürlicher Sprache aus KI-Assistenten wie **Claude**, **Cursor** und jedem anderen
 [MCP](https://modelcontextprotocol.io)-Client.
 
 Dieser [Model-Context-Protocol](https://modelcontextprotocol.io)-Server stellt die
 **[BuchhaltungsButler API v1](https://app.buchhaltungsbutler.de/docs/api/v1/)** bereit —
-alle **54 Endpunkte**, automatisch aus der offiziellen OpenAPI-Spezifikation
-(Spec-Version **1.9.1**) als MCP-Tools generiert. Jedes Tool ist
+alle **54 Endpunkte** als **46 MCP-Tools**, aus der offiziellen
+OpenAPI-Spezifikation (Spec-Version **1.9.1**) generiert. Jedes Tool ist
 **sicherheitskategorisiert** (nur lesend / schreibend / destruktiv), damit dein Assistent
 weiß, was eine Aktion tut, *bevor* er sie ausführt. Läuft über **stdio**
 (Claude Desktop und andere lokale Launcher) oder **Streamable HTTP** (gehostet in Docker).
@@ -34,7 +49,7 @@ Manche MCP-Server leiten eine API einfach nur weiter. Dieser hier ist darauf aus
 
 | Was du bekommst | Warum das zählt |
 | --- | --- |
-| **Alle 54 Endpunkte, automatisch generiert** aus der offiziellen Spec | Vollständige Abdeckung von Belegen, Transaktionen, Buchungen, Rechnungen, Auswertungen und Stammdaten — nichts handverlesen, nichts vergessen. |
+| **Alle 54 Endpunkte, automatisch generiert** aus der offiziellen Spec | Vollständige Abdeckung von Belegen, Transaktionen, Buchungen, Rechnungen, Auswertungen und Stammdaten. Nichts handverlesen, nichts vergessen. |
 | **Jedes Tool ist sicherheitskategorisiert** 🟢 / 🟡 / 🔴 | Ein Banner am Anfang jeder Tool-Beschreibung sagt dem Modell genau, was passiert — lesen, anlegen, ändern, zurücknehmen oder löschen — bevor es handelt. |
 | **Maschinenlesbare MCP-Annotationen** (`readOnlyHint`, `destructiveHint`) | Hosts, die Annotationen auswerten (Claude gehört dazu), können Lesezugriffe automatisch zulassen und vor destruktiven Aktionen eine Bestätigung verlangen. |
 | **Zwei Transporte: stdio *und* Streamable HTTP** | Lokal in Claude Desktop nutzen — oder einen dauerhaft laufenden Server betreiben, den beliebig viele MCP-Clients über HTTP erreichen. |
@@ -51,7 +66,7 @@ das lässt allerdings einiges liegen:
 
 | Fähigkeit | **Dieses Projekt** | Generischer OpenAPI→MCP-Wrapper\* |
 | --- | :---: | :---: |
-| Alle 54 BuchhaltungsButler-Endpunkte als Tools | ✅ | ✅ |
+| Alle 54 BuchhaltungsButler-Endpunkte abgedeckt | ✅ | ✅ |
 | 🟢 / 🟡 / 🔴 Sicherheitskategorie + Banner pro Tool | ✅ | ❌ |
 | `readOnlyHint` / `destructiveHint` MCP-Annotationen | ✅ | ➖ |
 | `$ref`-Auflösung für Batch-Payloads + HTML-bereinigte Beschreibungen | ✅ | ➖ |
@@ -199,108 +214,158 @@ Alles wird in `.env` gesetzt (kopiert aus `.env.example`):
 
 Nach Änderungen an `.env` neu laden mit `docker compose up -d --force-recreate`.
 
+## Toolnamen
+
+Jedes Tool heisst `<ressource>_<verb>`. Die Verben sind fest: `list`, `get`,
+`create`, `update`, `delete`, `upload`, `assign`, `unassign`, `unconfirm`,
+`restore`, `cancel`. Damit heisst dieselbe Sache ueberall gleich, unabhaengig
+davon, wie der jeweilige BB-Pfad geschrieben ist (die API mischt `add` und
+`create`, und zwei Batch-Pfade sind camelCase).
+
+Anlegen geht immer ueber ein Tool, das eine Liste nimmt. `receipts_create`
+legt einen Beleg oder hundert an, ein einzelner Datensatz ist eine Liste mit
+einem Eintrag. Deshalb gibt es 46 Tools fuer 54 Endpunkte: acht
+Einzel-Endpunkte sind in ihrem Batch-Gegenstueck aufgegangen.
+
+### Alte Namen bleiben aufrufbar
+
+Die Namen bis 1.1.1 funktionieren weiter. Sie stehen nicht mehr im Katalog,
+werden aber beim Aufruf aufgeloest, damit fest verdrahtete Aufrufe aus
+aelteren Releases nicht ins Leere laufen. Ein Aufruf von `receipts_add` mit
+Einzelfeldern landet weiterhin auf `/receipts/add`.
+
+`BB_READ_ONLY` und `BB_TOOL_ALLOWLIST` greifen vorher: ueber einen alten Namen
+laesst sich kein Tool erreichen, das die Policy ausschliesst.
+
+| Alt (bis 1.1.1) | Neu |
+|---|---|
+| `accounts_get` | `accounts_list` |
+| `receipts_get` | `receipts_list` |
+| `receipts_get_id_by_customer` | `receipts_get_by_id` |
+| `receipts_add`, `receipts_addBatch` | `receipts_create` |
+| `transactions_add`, `transactions_addBatch` | `transactions_create` |
+| `settings_get_creditors` | `creditors_list` |
+| `settings_add_creditor`, `settings_add_batch_creditors` | `creditors_create` |
+| `settings_get_postingaccounts` | `postingaccounts_list` |
+| `postings_add_free`, `postings_add_batch_free` | `postings_create_free` |
+| `transactions_assign_receipt`, `transactions_assign_batch_receipt` | `transactions_assign_receipts` |
+
+Die vollstaendige Zuordnung steht in [`src/naming.ts`](src/naming.ts).
+
 ## Sicherheitskategorien der Tools
 
-Jede Tool-Beschreibung beginnt mit einem dieser Banner und trägt die passenden
+Jede Tool-Beschreibung beginnt mit einem dieser Banner und traegt die passenden
 [MCP-Annotationen](https://modelcontextprotocol.io/docs/concepts/tools#tool-annotations):
 
 | Banner | Anzahl | `readOnlyHint` | `destructiveHint` | Bedeutung |
 |---|---|---|---|---|
-| 🟢 **READ-ONLY** | 15 | `true` | `false` | Ruft nur Daten ab. Ungefährlich. |
-| 🟡 **WRITE · legt Daten an** | 24 | `false` | `false` | Erzeugt Datensätze (nicht idempotent — mehrfach aufgerufen entstehen Duplikate). |
-| 🟡 **WRITE · ändert Daten** | 4 | `false` | `false` | Ändert bestehende Stammdaten direkt. |
-| 🟡 **WRITE · verknüpft/löst** | 4 | `false` | `false` | Ordnet Beleg ↔ Transaktion zu bzw. hebt die Zuordnung auf. Umkehrbar. |
-| 🟡 **WRITE · nimmt Zustand zurück** | 4 | `false` | `false` | Setzt Buchungen auf unbestätigt / stellt Belege wieder her. Umkehrbar. |
-| 🔴 **DESTRUCTIVE · löscht** | 3 | `false` | `true` | Löscht oder storniert einen Datensatz. Vorher bestätigen lassen. |
+| 🟢 **READ-ONLY** | 15 | `true` | `false` | Ruft nur Daten ab. Ungefaehrlich. |
+| 🟡 **WRITE · legt Daten an** | 17 | `false` | `false` | Erzeugt Datensaetze (nicht idempotent, mehrfach aufgerufen entstehen Duplikate). |
+| 🟡 **WRITE · aendert Daten** | 4 | `false` | `false` | Aendert bestehende Stammdaten direkt. |
+| 🟡 **WRITE · verknuepft/loest** | 3 | `false` | `false` | Ordnet Beleg und Transaktion zu bzw. hebt die Zuordnung auf. Umkehrbar. |
+| 🟡 **WRITE · nimmt Zustand zurueck** | 4 | `false` | `false` | Setzt Buchungen auf unbestaetigt / stellt Belege wieder her. Umkehrbar. |
+| 🔴 **DESTRUCTIVE · loescht** | 3 | `false` | `true` | Loescht oder storniert einen Datensatz. Vorher bestaetigen lassen. |
 
-Hosts, die Annotationen respektieren (Claude gehört dazu), können für
-`destructiveHint`-Tools eine Bestätigung verlangen und `readOnlyHint`-Tools automatisch
-vertrauen.
+Hosts, die Annotationen respektieren (Claude gehoert dazu), koennen fuer
+`destructiveHint`-Tools eine Bestaetigung verlangen und `readOnlyHint`-Tools
+automatisch vertrauen.
 
-> Mit `npm run list-tools` (ohne Zugangsdaten) lässt sich der vollständige Katalog
-> jederzeit ausgeben.
+Jedes Tool bringt zusaetzlich ein `outputSchema` mit, also die Form der
+Erfolgsantwort. Erfolgreiche Aufrufe liefern die Antwort deshalb nicht nur als
+Text, sondern auch als `structuredContent`.
+
+> Mit `npm run list-tools` (ohne Zugangsdaten) laesst sich der vollstaendige
+> Katalog jederzeit ausgeben.
 
 <details>
 <summary><strong>🟢 READ-ONLY (15)</strong></summary>
 
 | Tool | Endpunkt |
 |---|---|
-| `accounts_get` | `POST /accounts/get` |
-| `cost_locations_get` | `POST /cost-locations/get` |
-| `postings_get` | `POST /postings/get` |
-| `receipts_get` | `POST /receipts/get` |
-| `receipts_get_id_by_customer` | `POST /receipts/get/id_by_customer` |
-| `receipts_assigned_transactions_get` | `POST /receipts/assigned-transactions/get` |
+| `accounts_list` | `POST /accounts/get` |
+| `cost_locations_list` | `POST /cost-locations/get` |
+| `creditors_list` | `POST /settings/get/creditors` |
+| `debtors_list` | `POST /settings/get/debtors` |
+| `postingaccounts_list` | `POST /settings/get/postingaccounts` |
+| `postings_list` | `POST /postings/get` |
+| `receipts_get_by_id` | `POST /receipts/get/id_by_customer` |
+| `receipts_list` | `POST /receipts/get` |
+| `receipts_list_assigned_transactions` | `POST /receipts/assigned-transactions/get` |
 | `reports_get_bwa` | `POST /reports/get/bwa` |
 | `reports_get_sums` | `POST /reports/get/sums` |
 | `reports_get_sums_ledger` | `POST /reports/get/sums/ledger` |
-| `transactions_get` | `POST /transactions/get` |
-| `transactions_get_id_by_customer` | `POST /transactions/get/id_by_customer` |
-| `transactions_assigned_receipts_get` | `POST /transactions/assigned-receipts/get` |
-| `settings_get_creditors` | `POST /settings/get/creditors` |
-| `settings_get_debtors` | `POST /settings/get/debtors` |
-| `settings_get_postingaccounts` | `POST /settings/get/postingaccounts` |
+| `transactions_get_by_id` | `POST /transactions/get/id_by_customer` |
+| `transactions_list` | `POST /transactions/get` |
+| `transactions_list_assigned_receipts` | `POST /transactions/assigned-receipts/get` |
 </details>
 
 <details>
-<summary><strong>🟡 WRITE · legt Daten an (24)</strong></summary>
+<summary><strong>🟡 WRITE · legt Daten an (17)</strong></summary>
 
-| Tool | Endpunkt |
-|---|---|
-| `accounts_add` | `POST /accounts/add` |
-| `comments_add` | `POST /comments/add` |
-| `cost_locations_add` | `POST /cost-locations/add` |
-| `invoices_create` | `POST /invoices/create` |
-| `invoices_create_draft` | `POST /invoices/create/draft` |
-| `invoices_create_e_invoice` | `POST /invoices/create/e-invoice` |
-| `postings_add_free` | `POST /postings/add/free` |
-| `postings_add_receipt` | `POST /postings/add/receipt` |
-| `postings_add_transaction` | `POST /postings/add/transaction` |
-| `postings_add_batch_free` | `POST /postings/add-batch/free` |
-| `postings_add_batch_receipts` | `POST /postings/add-batch/receipts` |
-| `postings_add_batch_transactions` | `POST /postings/add-batch/transactions` |
-| `receipts_add` | `POST /receipts/add` |
-| `receipts_addBatch` | `POST /receipts/addBatch` |
-| `receipts_upload` | `POST /receipts/upload` |
-| `reports_create_bwa` | `POST /reports/create/bwa` |
-| `reports_create_sums` | `POST /reports/create/sums` |
-| `settings_add_creditor` | `POST /settings/add/creditor` |
-| `settings_add_debtor` | `POST /settings/add/debtor` |
-| `settings_add_postingaccount` | `POST /settings/add/postingaccount` |
-| `settings_add_batch_creditors` | `POST /settings/add-batch/creditors` |
-| `settings_add_batch_debtors` | `POST /settings/add-batch/debtors` |
-| `transactions_add` | `POST /transactions/add` |
-| `transactions_addBatch` | `POST /transactions/addBatch` |
+Tools mit zwei Endpunkten nehmen eine Liste. Kommt der Aufruf stattdessen mit
+Einzelfeldern, geht er an den Einzel-Endpunkt.
+
+| Tool | Endpunkt | Einzel-Endpunkt |
+|---|---|---|
+| `accounts_create` | `POST /accounts/add` | |
+| `comments_create` | `POST /comments/add` | |
+| `cost_locations_create` | `POST /cost-locations/add` | |
+| `creditors_create` | `POST /settings/add-batch/creditors` | `POST /settings/add/creditor` |
+| `debtors_create` | `POST /settings/add-batch/debtors` | `POST /settings/add/debtor` |
+| `invoices_create` | `POST /invoices/create` | |
+| `invoices_create_draft` | `POST /invoices/create/draft` | |
+| `invoices_create_e_invoice` | `POST /invoices/create/e-invoice` | |
+| `postingaccounts_create` | `POST /settings/add/postingaccount` | |
+| `postings_create_for_receipt` | `POST /postings/add-batch/receipts` | `POST /postings/add/receipt` |
+| `postings_create_for_transaction` | `POST /postings/add-batch/transactions` | `POST /postings/add/transaction` |
+| `postings_create_free` | `POST /postings/add-batch/free` | `POST /postings/add/free` |
+| `receipts_create` | `POST /receipts/addBatch` | `POST /receipts/add` |
+| `receipts_upload` | `POST /receipts/upload` | |
+| `reports_create_bwa` | `POST /reports/create/bwa` | |
+| `reports_create_sums` | `POST /reports/create/sums` | |
+| `transactions_create` | `POST /transactions/addBatch` | `POST /transactions/add` |
 </details>
 
 <details>
-<summary><strong>🟡 WRITE · ändert (4) · verknüpft (4) · nimmt zurück (4)</strong></summary>
+<summary><strong>🟡 WRITE · aendert (4) · verknuepft (3) · nimmt zurueck (4)</strong></summary>
 
 | Tool | Endpunkt | Unterkategorie |
 |---|---|---|
-| `cost_locations_update` | `POST /cost-locations/update` | ändert |
-| `settings_update_creditor` | `POST /settings/update/creditor` | ändert |
-| `settings_update_debtor` | `POST /settings/update/debtor` | ändert |
-| `settings_update_postingaccount` | `POST /settings/update/postingaccount` | ändert |
-| `transactions_assign_receipt` | `POST /transactions/assign/receipt` | verknüpft |
-| `transactions_assign_batch_receipt` | `POST /transactions/assign-batch/receipt` | verknüpft |
-| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | verknüpft |
-| `postings_assign_receipt_to_free_posting` | `POST /postings/assign/receipt-to-free-posting` | verknüpft |
-| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | nimmt zurück |
-| `postings_unconfirm_receipt` | `POST /postings/unconfirm/receipt` | nimmt zurück |
-| `postings_unconfirm_transaction` | `POST /postings/unconfirm/transaction` | nimmt zurück |
-| `receipts_restore_id_by_customer` | `POST /receipts/restore/id_by_customer` | nimmt zurück |
+| `cost_locations_update` | `POST /cost-locations/update` | aendert |
+| `creditors_update` | `POST /settings/update/creditor` | aendert |
+| `debtors_update` | `POST /settings/update/debtor` | aendert |
+| `postingaccounts_update` | `POST /settings/update/postingaccount` | aendert |
+| `postings_assign_receipt_to_free` | `POST /postings/assign/receipt-to-free-posting` | verknuepft |
+| `transactions_assign_receipts` | `POST /transactions/assign-batch/receipt` | verknuepft |
+| `transactions_unassign_receipt` | `POST /transactions/unassign/receipt` | verknuepft |
+| `postings_unconfirm_free` | `POST /postings/unconfirm/free` | nimmt zurueck |
+| `postings_unconfirm_for_receipt` | `POST /postings/unconfirm/receipt` | nimmt zurueck |
+| `postings_unconfirm_for_transaction` | `POST /postings/unconfirm/transaction` | nimmt zurueck |
+| `receipts_restore` | `POST /receipts/restore/id_by_customer` | nimmt zurueck |
 </details>
 
 <details>
-<summary><strong>🔴 DESTRUCTIVE · löscht (3)</strong></summary>
+<summary><strong>🔴 DESTRUCTIVE · loescht (3)</strong></summary>
 
 | Tool | Endpunkt | Hinweis |
 |---|---|---|
-| `receipts_delete_id_by_customer` | `POST /receipts/delete/id_by_customer` | Wiederherstellbar über `receipts_restore_id_by_customer` |
+| `receipts_delete` | `POST /receipts/delete/id_by_customer` | Wiederherstellbar ueber `receipts_restore` |
 | `cost_locations_delete` | `POST /cost-locations/delete` | **Nicht** wiederherstellbar |
-| `postings_cancel` | `POST /postings/cancel` | Noch nicht festgeschriebene Buchungen werden gelöscht; festgeschriebene werden durch eine Stornobuchung ausgeglichen |
+| `postings_cancel` | `POST /postings/cancel` | Noch nicht festgeschriebene Buchungen werden geloescht; festgeschriebene werden durch eine Stornobuchung ausgeglichen |
 </details>
+
+### Was die v1-API nicht kann
+
+Diese Luecken stehen absichtlich auch in den Tool-Beschreibungen, damit das
+Modell nicht nach einem Endpunkt sucht, den es nicht gibt:
+
+| Ressource | Fehlt |
+|---|---|
+| Kreditoren, Debitoren, Buchungskonten | kein Loeschen |
+| Konten (`accounts`) | kein Aendern, kein Loeschen |
+| Kommentare | kein Lesen, kein Aendern, kein Loeschen |
+| Rechnungen | kein Lesen, kein Aendern, kein Stornieren |
+| Transaktionen | kein Aendern, kein Loeschen |
 
 ## Aus dem Quellcode starten (stdio, ohne Docker)
 
@@ -390,11 +455,13 @@ zusätzlich ein Docker-Image in der GitHub Container Registry.
 ## Hinweise & Konventionen
 
 - **Datumsangaben**: `YYYY-MM-DD`. **Beträge**: Punkt als Dezimaltrennzeichen (z. B. `-12.30`).
-- **Datei-Uploads** (`receipts_upload`, `receipts_add`, `receipts_addBatch`): Die Datei
-  wird als Base64-Zeichenkette im Feld `file` übergeben.
-- **Blättern**: Die meisten `get`-Tools akzeptieren `limit` und `offset`.
-- **Batch-Tools** erwarten Arrays von Objekten; die Item-Schemata werden aus den
-  Spec-Definitionen aufgelöst und dem Modell mitgegeben.
+- **Datei-Uploads** (`receipts_upload`): Die Datei wird als Base64-Zeichenkette im
+  Feld `file` übergeben. `receipts_create` legt Belege ohne Datei an.
+- **Blättern**: Die meisten `list`-Tools akzeptieren `limit` und `offset` und melden
+  die Gesamtzahl in `rows`.
+- **Anlegen** geht immer über ein Tool, das ein Array nimmt; die Item-Schemata werden
+  aus den Spec-Definitionen aufgelöst und dem Modell mitgegeben. Ein einzelner
+  Datensatz ist ein Array mit einem Eintrag.
 - **Auswertungen** (BWA, Summen- und Saldenliste) werden asynchron im Hintergrund
   erzeugt: erst `reports_create_*` aufrufen, dann `reports_get_*` mit der zurückgegebenen
   `id_by_customer`. Eine neue Auswertung desselben Typs ersetzt die vorherige.
