@@ -337,10 +337,11 @@ describe("sessions", () => {
     });
     expect(list.status).toBe(200);
     const body = await list.json();
-    expect(body.result.tools.length).toBeGreaterThan(50);
+    expect(body.result.tools.length).toBeGreaterThan(40);
     // api_key must not be offered to the model unless explicitly enabled.
     for (const t of body.result.tools) {
       expect(t.inputSchema.properties?.api_key).toBeUndefined();
+      expect(t.outputSchema?.type).toBe("object");
     }
 
     const del = await fetch(`http://127.0.0.1:${s.port}/mcp`, {

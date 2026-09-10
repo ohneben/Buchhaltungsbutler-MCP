@@ -47,7 +47,7 @@ export const CATEGORIES: Record<CategoryId, CategoryMeta> = {
     id: "create",
     banner: "🟡 WRITE · creates data",
     blurb:
-      "Creates new records (receipts, transactions, postings, invoices, master data). Not idempotent — calling twice may create duplicates.",
+      "Creates new records (receipts, transactions, postings, invoices, master data). Not idempotent: calling twice may create duplicates.",
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,

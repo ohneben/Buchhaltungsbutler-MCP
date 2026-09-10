@@ -11,6 +11,7 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { buildToolDefs, specInfo, type ToolDef } from "./spec.js";
+import { buildAliases } from "./naming.js";
 import { BBClient, type BBConfig } from "./client.js";
 
 const FALLBACK_VERSION = "unknown";
@@ -65,6 +66,18 @@ export function createServer(client: BBClient): Server {
   const tools = applyToolPolicy(allTools);
   const byName = new Map<string, ToolDef>(tools.map((t) => [t.name, t]));
   const known = new Set(allTools.map((t) => t.name));
+
+  // Names used by releases up to 1.1.1 stay callable but are deliberately
+  // absent from tools/list: the catalogue shows one name per capability,
+  // while a call hardcoded against an older release still resolves. Aliases
+  // are resolved before the policy lookup, so BB_READ_ONLY and
+  // BB_TOOL_ALLOWLIST cannot be side-stepped through an old name.
+  const aliases = buildAliases(
+    allTools.flatMap((t) => [t.path, ...(t.singlePath ? [t.singlePath] : [])])
+  );
+  for (const old of Object.keys(aliases)) known.add(old);
+  const resolve = (name: string): ToolDef | undefined =>
+    byName.get(name) ?? byName.get(aliases[name] ?? "");
   if (tools.length !== allTools.length) {
     console.error(
       `buchhaltungsbutler-mcp: tool policy active, exposing ${tools.length}/${allTools.length} tools`
@@ -81,11 +94,17 @@ export function createServer(client: BBClient): Server {
       instructions:
         `MCP server for ${info.title} (${info.version}).\n\n` +
         "Every tool description starts with a category banner:\n" +
-        "  🟢 READ-ONLY — safe, fetches data only.\n" +
-        "  🟡 WRITE — creates / updates / links / reverts accounting data.\n" +
-        "  🔴 DESTRUCTIVE — deletes data; confirm with the user first.\n\n" +
+        "  🟢 READ-ONLY: safe, fetches data only.\n" +
+        "  🟡 WRITE: creates, updates, links or reverts accounting data.\n" +
+        "  🔴 DESTRUCTIVE: deletes data. Confirm with the user first.\n\n" +
+        "Tools are named `<resource>_<verb>`, e.g. `receipts_list`, " +
+        "`receipts_create`, `postings_cancel`. Creating records is always one " +
+        "tool that takes an array, so the same tool handles one record or " +
+        "many: pass an array of one for a single record.\n\n" +
         "Amounts use a dot as decimal separator. Dates are 'YYYY-MM-DD'. " +
-        "Most list/get tools support `limit` and `offset` for paging. " +
+        "`id_by_customer` is the per-customer counter from the " +
+        "BuchhaltungsButler UI, not a global id. Most list tools support " +
+        "`limit` and `offset` and report the total in `rows`. " +
         "The `api_key` field defaults to the server configuration; only pass " +
         "it to target a different BB customer account.",
     }
@@ -97,6 +116,7 @@ export function createServer(client: BBClient): Server {
       title: t.title,
       description: t.description,
       inputSchema: t.inputSchema as Tool["inputSchema"],
+      outputSchema: t.outputSchema as Tool["outputSchema"],
       annotations: {
         title: t.title,
         ...t.category.annotations,
@@ -113,7 +133,7 @@ export function createServer(client: BBClient): Server {
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const def = byName.get(req.params.name);
+    const def = resolve(req.params.name);
     if (!def) {
       const text = known.has(req.params.name)
         ? `Tool disabled by server policy (BB_READ_ONLY / BB_TOOL_ALLOWLIST): ${req.params.name}`
@@ -123,8 +143,17 @@ export function createServer(client: BBClient): Server {
 
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
 
+    // A merged create tool advertises the batch array. A call that arrives
+    // with the single-record fields instead (an older client, or a model that
+    // skipped the array) is routed to the single-record endpoint rather than
+    // rejected.
+    const path =
+      def.singlePath && def.batchParam && args[def.batchParam] === undefined
+        ? def.singlePath
+        : def.path;
+
     try {
-      const { status, ok, body } = await client.call(def.path, args);
+      const { status, ok, body } = await client.call(path, args);
       const payload =
         typeof body === "string" ? body : JSON.stringify(body, null, 2);
 
@@ -134,7 +163,7 @@ export function createServer(client: BBClient): Server {
           content: [
             {
               type: "text",
-              text: `BuchhaltungsButler API returned HTTP ${status} for ${def.path}:\n${payload}`,
+              text: `BuchhaltungsButler API returned HTTP ${status} for ${path}:\n${payload}`,
             },
           ],
         };
@@ -153,20 +182,28 @@ export function createServer(client: BBClient): Server {
           content: [
             {
               type: "text",
-              text: `BuchhaltungsButler reported failure for ${def.path}:\n${payload}`,
+              text: `BuchhaltungsButler reported failure for ${path}:\n${payload}`,
             },
           ],
         };
       }
 
-      return { content: [{ type: "text", text: payload }] };
+      // Every tool declares an outputSchema, so a successful result carries
+      // the parsed envelope as structuredContent. The text block stays for
+      // hosts that do not read structured results.
+      return {
+        content: [{ type: "text", text: payload }],
+        ...(body && typeof body === "object" && !Array.isArray(body)
+          ? { structuredContent: body as Record<string, unknown> }
+          : {}),
+      };
     } catch (err) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Request to ${def.path} failed: ${
+            text: `Request to ${path} failed: ${
               err instanceof Error ? err.message : String(err)
             }`,
           },

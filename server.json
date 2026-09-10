@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.ohneben/buchhaltungsbutler-mcp",
   "title": "BuchhaltungsButler",
-  "description": "BuchhaltungsButler API v1: alle 54 Endpunkte als sicherheitskategorisierte MCP-Tools",
+  "description": "BuchhaltungsButler API v1: alle 54 Endpunkte als 46 sicherheitskategorisierte MCP-Tools",
   "version": "1.1.1",
   "websiteUrl": "https://github.com/ohneben/Buchhaltungsbutler-MCP#readme",
   "repository": {
