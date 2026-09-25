@@ -1,16 +1,18 @@
-/** Narrow corrections for receipt/payment postings in the vendor's v1 spec.
+/** Narrow corrections for postings and receipt assignments in the vendor's v1 spec.
  * See docs/write-postings.md for observed responses and scope.
  */
 import type { JsonSchema } from "./spec.js";
 
-function postingBatchKey(path: string): "receipts" | "transactions" | undefined {
+function writeBatchKey(path: string): "receipts" | "transactions" | "transactions_to_receipts" | undefined {
   if (path === "/postings/add-batch/receipts") return "receipts";
   if (path === "/postings/add-batch/transactions") return "transactions";
+  if (path === "/transactions/assign-batch/receipt") return "transactions_to_receipts";
   return undefined;
 }
 
 export function correctPostingInput(path: string, schema: JsonSchema): void {
-  const key = postingBatchKey(path);
+  const key = writeBatchKey(path);
+  if (key === "transactions_to_receipts") return;
   const item = key ? schema.properties?.[key]?.items : undefined;
   const props = item?.properties;
   if (!item || !props) return;
@@ -37,16 +39,27 @@ export function correctPostingInput(path: string, schema: JsonSchema): void {
   }
 }
 
-export function correctPostingOutput(path: string, schema: JsonSchema): void {
-  if (!postingBatchKey(path)) return;
+export function correctWriteOutput(path: string, schema: JsonSchema): void {
+  const key = writeBatchKey(path);
+  if (!key) return;
+  if (key === "transactions_to_receipts") {
+    const props = schema.properties?.[key]?.items?.properties;
+    // Successful live assignments return numeric IDs. Preserve strings too,
+    // without coercing the actual response or accepting fractional IDs.
+    for (const name of ["transaction_id_by_customer", "receipt_id_by_customer"]) {
+      const field = props?.[name];
+      if (field?.type === "string") field.type = ["string", "integer"];
+    }
+  }
   const data = schema.properties?.errors?.items?.properties?.request_data;
   // Observed failures contain the submitted item as an object. Keep the
   // documented array form as well, without relaxing the rest of the schema.
+  // For assignments this is defensive compatibility, not a live failure sample.
   if (data?.type === "array") data.type = ["array", "object"];
 }
 
-export function hasPostingBatchErrors(path: string, body: unknown): body is Record<string, unknown> {
-  const key = postingBatchKey(path);
+export function hasWriteBatchErrors(path: string, body: unknown): body is Record<string, unknown> {
+  const key = writeBatchKey(path);
   if (!key || !body || typeof body !== "object" || Array.isArray(body)) return false;
   const result = body as Record<string, unknown>;
   if (Array.isArray(result.errors) && result.errors.length > 0) return true;

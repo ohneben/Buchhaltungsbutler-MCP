@@ -442,8 +442,8 @@ zugeordnete Pfade fallen konservativ auf die Kategorie *create* zurück).
 
 ## Entwicklung
 
-Hinweise zu den korrigierten Buchungsfeldern und zum Umgang mit teilweise
-fehlgeschlagenen Sammelbuchungen: [Belege und Zahlungen buchen](docs/write-postings.md).
+Hinweise zu korrigierten Buchungs- und Zuordnungsantworten, Teilfehlern und
+unklarem Schreibausgang: [Belege buchen und Zahlungen zuordnen](docs/write-postings.md).
 
 ```bash
 npm install

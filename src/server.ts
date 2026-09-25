@@ -13,7 +13,7 @@ import {
 import { buildToolDefs, specInfo, type ToolDef } from "./spec.js";
 import { buildAliases } from "./naming.js";
 import { BBClient, type BBConfig } from "./client.js";
-import { hasPostingBatchErrors } from "./write-compat.js";
+import { hasWriteBatchErrors } from "./write-compat.js";
 
 const FALLBACK_VERSION = "unknown";
 
@@ -170,16 +170,16 @@ export function createServer(client: BBClient): Server {
         };
       }
 
-      // A successful batch envelope does not mean every posting succeeded.
+      // A successful batch envelope does not mean every write succeeded.
       // Preserve the response, including successful items, for reconciliation.
-      if (hasPostingBatchErrors(path, body)) {
+      if (hasWriteBatchErrors(path, body)) {
         return {
           isError: true,
           content: [{
             type: "text",
-            text: `BuchhaltungsButler rejected some or all postings for ${path}. ` +
-              "Other items may already have been booked. Check the item results " +
-              "and journal before retrying; do not resend the entire batch.\n" + payload,
+            text: `BuchhaltungsButler rejected some or all items for ${path}. ` +
+              "Other items may already have been applied. Check the item results, " +
+              "journal and receipt assignments before retrying; do not resend the entire batch.\n" + payload,
           }],
           structuredContent: body,
         };

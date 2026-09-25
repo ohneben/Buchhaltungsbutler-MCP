@@ -22,9 +22,12 @@ const transaction = {
   amounts: [11.9],
   vats: ["19_pre"],
 };
+const assignment = { transaction_id_by_customer: 456, receipt_id_by_customer: 123 };
 const cases = [
   { name: "postings_create_for_receipt", path: "/postings/add-batch/receipts", key: "receipts", item: receipt },
   { name: "postings_create_for_transaction", path: "/postings/add-batch/transactions", key: "transactions", item: transaction },
+  // Assignment error variants are defensive tests; numeric success IDs were observed live.
+  { name: "transactions_assign_receipts", path: "/transactions/assign-batch/receipt", key: "transactions_to_receipts", item: assignment },
 ];
 const defs = buildToolDefs();
 const validators = new AjvJsonSchemaValidator();
@@ -70,7 +73,7 @@ describe("posting inputs accepted by the advertised schema", () => {
 describe.each(cases)("$name responses", ({ name, key, item }) => {
   const schema = defs.find(t => t.name === name)!.outputSchema;
   const valid = validators.getValidator(schema);
-  it("accepts the observed request_data object in an error", () => {
+  it("accepts an object-form request_data in an error", () => {
     expect(valid({ success: true, [key]: [], errors: [{
       success: false, error_code: 23, message: "No postingtexts are set", request_data: item,
     }] }).valid).toBe(true);
@@ -131,7 +134,9 @@ describe.each(cases)("$name batch outcomes", ({ name, key, path, item }) => {
     expect(seen).toHaveLength(1);
   });
   it("preserves successful items on partial failure and never retries the batch", async () => {
-    const other = { ...item, amounts: [23.8] };
+    const other = key === "transactions_to_receipts"
+      ? { ...item, receipt_id_by_customer: 124 }
+      : { ...item, amounts: [23.8] };
     body = { success: true, [key]: [{ success: true, message: "" }], errors: [{
       success: false, error_code: 23, message: "Rejected", request_data: other,
     }] };
@@ -188,4 +193,47 @@ it("does not apply posting-specific error rules to a read tool", async () => {
   const result = await client.callTool({ name: "accounts_list", arguments: {} });
   expect(result.isError).toBeFalsy();
   expect(result.structuredContent).toEqual(body);
+});
+
+describe("receipt assignment response IDs", () => {
+  const valid = validators.getValidator(defs.find(t => t.name === "transactions_assign_receipts")!.outputSchema);
+  it.each([
+    [456, 123], ["456", "123"], [456, "123"], ["456", 123],
+  ])("preserves transaction ID %s and receipt ID %s through a strict client", async (transactionId, receiptId) => {
+    body = { success: true, transactions_to_receipts: [{
+      success: true, message: "", transaction_id_by_customer: transactionId, receipt_id_by_customer: receiptId,
+    }], errors: [] };
+    expect(valid(body).valid).toBe(true);
+    const result = await client.callTool({ name: "transactions_assign_receipts", arguments: {
+      transactions_to_receipts: [assignment],
+    } });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual(body);
+    expect(seen).toEqual([{ path: "/api/v1/transactions/assign-batch/receipt", body: {
+      api_key: "test", transactions_to_receipts: [assignment],
+    } }]);
+  });
+  it.each([null, false, 1.5, {}, []])("rejects invalid ID %j without relaxing the other ID field", id => {
+    for (const field of ["transaction_id_by_customer", "receipt_id_by_customer"]) {
+      expect(valid({ success: true, transactions_to_receipts: [{
+        success: true, message: "", ...assignment, [field]: id,
+      }], errors: [] }).valid).toBe(false);
+    }
+  });
+  it("preserves the single-assignment fallback", async () => {
+    const result = await client.callTool({ name: "transactions_assign_receipts", arguments: assignment });
+    expect(result.isError).toBeFalsy();
+    expect(seen).toEqual([{ path: "/api/v1/transactions/assign/receipt", body: { api_key: "test", ...assignment } }]);
+  });
+  it("reports assignment batch failures through the legacy alias", async () => {
+    body = { success: true, transactions_to_receipts: [], errors: [{
+      success: false, error_code: 1, message: "Rejected", request_data: assignment,
+    }] };
+    const result = await client.callTool({ name: "transactions_assign_batch_receipt", arguments: {
+      transactions_to_receipts: [assignment],
+    } });
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toEqual(body);
+    expect(seen).toHaveLength(1);
+  });
 });
