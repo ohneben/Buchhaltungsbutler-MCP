@@ -133,7 +133,7 @@ export function createServer(client: BBClient): Server {
     return { tools: list };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
     const def = resolve(req.params.name);
     if (!def) {
       const text = known.has(req.params.name)
@@ -165,7 +165,12 @@ export function createServer(client: BBClient): Server {
     }
 
     try {
-      const { status, ok, body } = await client.call(path, requestArgs);
+      const { status, ok, body } = await client.call(path, requestArgs, {
+        // Reads are idempotent, so a transient failure gets another attempt.
+        // Writes never do: one that timed out may still have been booked.
+        retry: def.category.id === "read",
+        signal: extra.signal,
+      });
       const payload =
         typeof body === "string" ? body : JSON.stringify(body, null, 2);
 
