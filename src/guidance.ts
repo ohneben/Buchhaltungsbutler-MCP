@@ -142,7 +142,7 @@ export const GUIDANCE: Record<string, Guidance> = {
     use: "Use to search receipts by direction, date range or payment status.",
     avoid:
       "To fetch one known receipt, use `receipts_get_by_id`.",
-    note: "`list_direction` is required and selects inbound or outbound receipts. Supports `limit` and `offset`; the response reports the total in `rows`.",
+    note: "`list_direction` is required and selects inbound or outbound receipts. Supports `limit` and `offset`; observed `rows` counts only the returned page. Continue paging until empty, deduplicate IDs and check progress.",
   },
   "/receipts/get/id_by_customer": {
     use: "Use to fetch a single receipt whose id you already have.",
@@ -196,17 +196,17 @@ export const GUIDANCE: Record<string, Guidance> = {
       "For the individual bookings behind one posting account, use `reports_get_sums_ledger`.",
   },
   "/reports/get/sums/ledger": {
-    use: "Use to drill into one posting account of a finished sums report and see the individual entries behind its balance.",
+    use: "Use to read one posting account's ledger for a bounded date range.",
     avoid:
       "For the totals across all posting accounts, use `reports_get_sums`.",
-    note: "Requires a sums report created by `reports_create_sums` to have finished.",
+    note: "The API returns the ledger on demand; no previously generated sums report or report ID is required.",
   },
 
   // ---- creditors / debtors / posting accounts -----------------------------
   "/settings/get/creditors": {
     use: "Use to list suppliers, for example to resolve a supplier name to the `creditor` id the receipt and posting tools expect.",
     avoid: "For customers you invoice, use `debtors_list`.",
-    note: "Supports `limit` and `offset`; the response reports the total in `rows`, so page until you have seen that many rows. v1 offers no delete endpoint for creditors, so they can only be created, listed and updated.",
+    note: "Supports `limit` and `offset`. Do not assume `rows` is the grand total. Continue paging until empty and check progress. v1 offers no delete endpoint for creditors, so they can only be created, listed and updated.",
   },
   "/settings/add-batch/creditors": {
     use: "Use to create one or more suppliers.",
@@ -235,7 +235,7 @@ export const GUIDANCE: Record<string, Guidance> = {
     use: "Use to list the chart of accounts, for example to find the posting account number for office supplies before booking.",
     avoid:
       "Not bank accounts. For the bank, cash and credit-card accounts transactions belong to, use `accounts_list`.",
-    note: "Supports `limit` and `offset`; a full SKR chart runs to several hundred rows, so page until `rows` is covered or filter instead. v1 offers no delete endpoint for posting accounts.",
+    note: "Supports `limit` and `offset`; a full SKR chart runs to several hundred rows. Do not assume `rows` is the grand total: continue paging until empty and check progress, or filter instead. v1 offers no delete endpoint for posting accounts.",
   },
   "/settings/add/postingaccount": {
     use: "Use to add an account number to the chart of accounts that the standard chart does not cover.",
@@ -252,7 +252,7 @@ export const GUIDANCE: Record<string, Guidance> = {
   "/transactions/get": {
     use: "Use to search bank transactions by account and date range.",
     avoid: "To fetch one known transaction, use `transactions_get_by_id`.",
-    note: "Supports `limit` and `offset`; the response reports the total in `rows`. Ask for a bounded date range rather than the full history.",
+    note: "For multi-page exports, prefer `id_by_customer_from` with `limit` and fixed account/date filters: it is exclusive and forces ID-ascending order. Start at 0, then use the greatest returned ID without incrementing it; omit `offset`. Validate IDs and forward progress and continue until empty. Offset pages have overlapped in observed filtered exports; deduplication and an empty final page do not prove completeness. Reconcile IDs/counts and signed amounts independently. `rows` counts the returned page, not the grand total; concurrent changes still need a separate check.",
   },
   "/transactions/get/id_by_customer": {
     use: "Use to fetch a single bank transaction whose id you already have.",

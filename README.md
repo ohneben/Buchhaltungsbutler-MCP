@@ -452,19 +452,37 @@ npm run list-tools # kategorisierten Tool-Katalog ausgeben (ohne Zugangsdaten)
 Die CI baut und testet jeden Push unter Node 20 und 22; Pushes auf `main` veröffentlichen
 zusätzlich ein Docker-Image in der GitHub Container Registry.
 
+Für eine ergänzende Prüfung mit einem eigenen API-Zugang siehe
+[Lesende API-/MCP-Verifikation](./docs/read-only-validation.md). Die normale
+Testsuite verwendet synthetische Daten und benötigt keine Zugangsdaten.
+
 ## Hinweise & Konventionen
 
 - **Datumsangaben**: `YYYY-MM-DD`. **Beträge**: Punkt als Dezimaltrennzeichen (z. B. `-12.30`).
 - **Datei-Uploads** (`receipts_upload`): Die Datei wird als Base64-Zeichenkette im
   Feld `file` übergeben. `receipts_create` legt Belege ohne Datei an.
-- **Blättern**: Die meisten `list`-Tools akzeptieren `limit` und `offset` und melden
-  die Gesamtzahl in `rows`.
+- **Blättern**: Die meisten `list`-Tools akzeptieren `limit` und `offset`. Bei den
+  geprüften Beleg-, Transaktions- und Buchungslisten zählt `rows` nur die aktuelle
+  Seite, nicht den Gesamtbestand. Wiederholte IDs und fehlenden Fortschritt
+  erkennen. Eine leere Abschlussseite und Deduplizierung beweisen keine
+  Vollständigkeit: gefilterte Transaktionsseiten haben sich im Praxistest
+  überschnitten, während andere IDs fehlten. Für `transactions_list` bevorzugt
+  `id_by_customer_from` mit konstanten Filtern und `limit`, ohne `offset`, nutzen:
+  Der Cursor ist exklusiv und erzwingt aufsteigende ID-Sortierung. Bei 0 beginnen,
+  anschließend die größte erhaltene ID unverändert als nächsten Cursor setzen;
+  IDs und Fortschritt prüfen, bis zur leeren Seite fortsetzen und unabhängig
+  abstimmen. Details und Grenzen: [lesende Verifikation](docs/read-only-validation.md#seitennavigation).
+- **Einzelabrufe**: `receipts_get_by_id` und `transactions_get_by_id` benötigen
+  `id_by_customer` als positive ganze Zahl aus dem jeweiligen Listentool. Der
+  Server setzt diese Nummer in den API-Pfad ein.
 - **Anlegen** geht immer über ein Tool, das ein Array nimmt; die Item-Schemata werden
   aus den Spec-Definitionen aufgelöst und dem Modell mitgegeben. Ein einzelner
   Datensatz ist ein Array mit einem Eintrag.
 - **Auswertungen** (BWA, Summen- und Saldenliste) werden asynchron im Hintergrund
   erzeugt: erst `reports_create_*` aufrufen, dann `reports_get_*` mit der zurückgegebenen
   `id_by_customer`. Eine neue Auswertung desselben Typs ersetzt die vorherige.
+- **Kontenblatt**: `reports_get_sums_ledger` benötigt nur Buchungskontonummer und
+  Zeitraum; die API liefert es direkt, ohne vorher erzeugte SuSa und ohne Berichts-ID.
 - **Rate-Limit**: BuchhaltungsButler erlaubt 100 Anfragen/Kunde/Minute; der Server
   drosselt sich selbst bei `BB_RATE_LIMIT` (Standard 90), um sicher darunter zu bleiben.
 

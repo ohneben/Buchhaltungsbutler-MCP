@@ -152,6 +152,82 @@ describe("merged create tools", () => {
 });
 
 describe("results", () => {
+  it.each([
+    ["creditors_list", {}, { email: null, uid_ch: null }],
+    ["debtors_list", {}, { email: null, uid_ch: null }],
+    ["postingaccounts_list", {}, { parent_name: null, subtype: null }],
+    ["postings_list", { date_from: "2023-01-01", date_to: "2023-01-31" }, { date_delivery: null, booking_number: 1, transaction_amount: null, transaction_id_by_customer: null }],
+    ["receipts_list", { list_direction: "inbound" }, { due_date: null, link_to_receipt_id_by_customer: null }],
+    ["transactions_list", {}, { id_by_customer: 123, purpose: null }],
+    ["postings_list", { date_from: "2023-01-01", date_to: "2023-01-31" }, { receipt_id_by_customer: null }],
+    ["receipts_list", { list_direction: "inbound" }, { payment_date: null, account: null, invoicenumber: null, amount: null }],
+    ["receipts_list_assigned_transactions", { receipt_id_by_customer: 1 }, { id_by_customer: 123 }],
+    ["transactions_list_assigned_receipts", { transaction_id_by_customer: 1 }, { id_by_customer: 123 }],
+  ])("preserves observed API response types for %s", async (name, args, row) => {
+    const payload = { success: true, data: [row] };
+    stubFetch(payload);
+    await client.listTools();
+    const res = await client.callTool({ name: name as string, arguments: args as Record<string, unknown> });
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it.each([
+    ["receipts_get_by_id", "/receipts/get/123", { id_by_customer: "123", amount_original: null, currency_original: null, exchangerate: null, e_invoice_type: 0, payment_reference: null, date_delivery: null, date_payment_due: null, link_to_receipt_id_by_customer: null }],
+    ["transactions_get_by_id", "/transactions/get/123", { id_by_customer: 123, bank_name: null, type: null, booking_text: null }],
+  ])("routes %s using the numeric ID and validates the unchanged result", async (name, path, data) => {
+    const payload = { success: true, data };
+    const seen = stubFetch(payload);
+    const { tools } = await client.listTools();
+    expect(tools.find(t => t.name === name)!.inputSchema.required).toContain("id_by_customer");
+    const res = await client.callTool({ name: name as string, arguments: { id_by_customer: 123 } });
+    expect(seen[0].path).toBe(path);
+    expect(seen[0].body).not.toHaveProperty("id_by_customer");
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it.each([undefined, 0, -1, 1.5, "../add", Number.MAX_SAFE_INTEGER + 1])("rejects an unsafe single-record ID before network access: %s", async (id) => {
+    const seen = stubFetch();
+    for (const name of ["receipts_get_by_id", "transactions_get_by_id"]) {
+      const res = await client.callTool({ name, arguments: { id_by_customer: id } });
+      expect(res.isError).toBe(true);
+    }
+    expect(seen).toHaveLength(0);
+  });
+
+  it("accepts unassigned ledger numbers without altering the account response", async () => {
+    const payload = { success: true, rows: 2, data: [
+      { name: "Assigned", postingaccount_number: "1200" },
+      { name: "Unassigned", postingaccount_number: null },
+    ] };
+    stubFetch(payload);
+    await client.listTools();
+    const res = await client.callTool({ name: "accounts_list", arguments: {} });
+    expect(res.isError).toBeFalsy();
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it("still rejects unrelated invalid ledger-number types", async () => {
+    stubFetch({ success: true, data: [{ postingaccount_number: false }] });
+    await client.listTools();
+    await expect(client.callTool({ name: "accounts_list", arguments: {} }))
+      .rejects.toThrow(/output schema/);
+  });
+
+  it("preserves null detail fields without replacing unknown tax or payment values", async () => {
+    const payload = { success: true, data: { id_by_customer: "123", amount: null, vat: null, payment_date: null, account: null, invoicenumber: null } };
+    stubFetch(payload);
+    await client.listTools();
+    const res = await client.callTool({ name: "receipts_get_by_id", arguments: { id_by_customer: 123 } });
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it("still rejects malformed receipt amounts", async () => {
+    stubFetch({ success: true, data: [{ amount: false }] });
+    await client.listTools();
+    await expect(client.callTool({ name: "receipts_list", arguments: { list_direction: "inbound" } }))
+      .rejects.toThrow(/output schema/);
+  });
+
   it("returns the parsed envelope as structured content", async () => {
     stubFetch({ success: true, rows: 1, data: [{ name: "Kasse" }] });
     const res = await client.callTool({ name: "accounts_list", arguments: {} });
@@ -163,6 +239,30 @@ describe("results", () => {
     stubFetch({ success: false, message: "nope" });
     const res = await client.callTool({ name: "accounts_list", arguments: {} });
     expect(res.isError).toBe(true);
+  });
+});
+
+describe("transaction pagination remains a transparent single-page call", () => {
+  it("forwards exclusive cursor and fixed filters without adding an offset", async () => {
+    const payload = { success: true, rows: 1, data: [{ id_by_customer: 124, amount: "-12.30" }] };
+    const seen = stubFetch(payload);
+    await client.listTools();
+    const args = { account: 1200, date_from: "2025-01-01", date_to: "2025-12-31", id_by_customer_from: 123, id_by_customer_to: 200, limit: 2 };
+    const res = await client.callTool({ name: "transactions_list", arguments: args });
+    expect(seen).toEqual([{ path: "/transactions/get", body: { api_key: "k", ...args } }]);
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it("preserves overlapping page responses so the caller can detect them", async () => {
+    const payload = { success: true, rows: 1, data: [{ id_by_customer: 123, amount: "-12.30" }] };
+    const seen = stubFetch(payload);
+    await client.listTools();
+    for (const offset of [0, 1]) {
+      const res = await client.callTool({ name: "transactions_list", arguments: { limit: 1, offset } });
+      expect(res.structuredContent).toEqual(payload);
+    }
+    expect(seen.map((x) => x.body.offset)).toEqual([0, 1]);
+    expect(seen).toHaveLength(2);
   });
 });
 

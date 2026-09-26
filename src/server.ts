@@ -104,7 +104,7 @@ export function createServer(client: BBClient): Server {
         "Amounts use a dot as decimal separator. Dates are 'YYYY-MM-DD'. " +
         "`id_by_customer` is the per-customer counter from the " +
         "BuchhaltungsButler UI, not a global id. Most list tools support " +
-        "`limit` and `offset` and report the total in `rows`. " +
+        "`limit` and `offset`. Do not treat `rows` as a grand total: observed responses count only the returned page. Detect repeated IDs and missing progress; an empty final page and deduplication do not prove completeness. For transactions, prefer the exclusive `id_by_customer_from` cursor with fixed filters and no offset; reconcile exports independently. " +
         "The `api_key` field defaults to the server configuration; only pass " +
         "it to target a different BB customer account.",
     }
@@ -147,13 +147,24 @@ export function createServer(client: BBClient): Server {
     // with the single-record fields instead (an older client, or a model that
     // skipped the array) is routed to the single-record endpoint rather than
     // rejected.
-    const path =
+    let path =
       def.singlePath && def.batchParam && args[def.batchParam] === undefined
         ? def.singlePath
         : def.path;
 
+    let requestArgs = args;
+    if (def.path === "/receipts/get/id_by_customer" || def.path === "/transactions/get/id_by_customer") {
+      const id = args.id_by_customer;
+      if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+        return { isError: true, content: [{ type: "text", text: "id_by_customer must be a positive safe integer." }] };
+      }
+      path = def.path.replace(/id_by_customer$/, String(id));
+      const { id_by_customer: _id, ...rest } = args;
+      requestArgs = rest;
+    }
+
     try {
-      const { status, ok, body } = await client.call(path, args);
+      const { status, ok, body } = await client.call(path, requestArgs);
       const payload =
         typeof body === "string" ? body : JSON.stringify(body, null, 2);
 

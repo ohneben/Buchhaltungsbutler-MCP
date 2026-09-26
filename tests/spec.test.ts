@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildToolDefs, specInfo } from "../src/spec.js";
+import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
 
 const tools = buildToolDefs();
 
@@ -13,6 +14,16 @@ describe("specInfo", () => {
 });
 
 describe("buildToolDefs", () => {
+  it("accepts documented receipt sorting fields and rejects placeholders or invalid directions", () => {
+    const schema = tools.find(t => t.name === "receipts_list")!.inputSchema;
+    const validate = new AjvJsonSchemaValidator().getValidator(schema);
+    for (const order of [{ date: "ASC" }, { date: "DESC", amount: "ASC" }, { invoice_number: "DESC" }]) {
+      expect(validate({ list_direction: "inbound", order }).valid).toBe(true);
+    }
+    for (const order of [{ field: "ASC" }, { date: "descending" }, { unknown: "ASC" }]) {
+      expect(validate({ list_direction: "inbound", order }).valid).toBe(false);
+    }
+  });
   it("generates exactly 46 tools", () => {
     // 54 endpoints, eight of which are the single-record half of a batch
     // pair and are exposed through the batch tool instead.

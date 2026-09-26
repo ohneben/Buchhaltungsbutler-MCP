@@ -68,6 +68,7 @@ interface SwaggerSpec {
 
 export type JsonSchema = {
   type?: string | string[];
+  minimum?: number;
   description?: string;
   properties?: Record<string, JsonSchema>;
   required?: string[];
@@ -283,6 +284,38 @@ function buildOutputSchema(
   return resolved;
 }
 
+// Narrow compatibility corrections observed in real read-only API responses.
+// Keep missing values and numeric identifiers intact; never coerce accounting data.
+function adjustReadOutput(path: string, schema: JsonSchema): void {
+  const nullable: Record<string, string[]> = {
+    "/accounts/get": ["postingaccount_number"],
+    "/settings/get/creditors": ["email", "uid_ch"],
+    "/settings/get/debtors": ["email", "uid_ch"],
+    "/settings/get/postingaccounts": ["parent_name", "subtype"],
+    "/postings/get": ["date_delivery", "transaction_amount", "transaction_id_by_customer", "receipt_id_by_customer"],
+    "/receipts/get": ["due_date", "link_to_receipt_id_by_customer", "payment_date", "account", "invoicenumber", "amount"],
+    "/receipts/get/id_by_customer": ["amount_original", "currency_original", "exchangerate", "payment_reference", "date_delivery", "date_payment_due", "link_to_receipt_id_by_customer", "vat", "payment_date", "account", "invoicenumber", "amount"],
+    "/transactions/get": ["purpose"],
+    "/transactions/get/id_by_customer": ["bank_name", "type", "booking_text"],
+  };
+  const numeric: Record<string, string[]> = {
+    "/postings/get": ["booking_number"],
+    "/transactions/get": ["id_by_customer"],
+    "/receipts/assigned-transactions/get": ["id_by_customer"],
+    "/transactions/assigned-receipts/get": ["id_by_customer"],
+    "/receipts/get/id_by_customer": ["e_invoice_type"],
+    "/transactions/get/id_by_customer": ["id_by_customer"],
+  };
+  const data = schema.properties?.data;
+  const fields = (data?.type === "array" ? data.items : data)?.properties;
+  for (const [type, names] of [["null", nullable[path] || []], ["integer", numeric[path] || []]] as const) {
+    for (const name of names) {
+      const field = fields?.[name];
+      if (field?.type === "string") field.type = ["string", type];
+    }
+  }
+}
+
 /** Assemble the description the model reads. */
 function buildDescription(args: {
   category: CategoryMeta;
@@ -361,6 +394,22 @@ export function buildToolDefs(): ToolDef[] {
         if (arr?.items) enrichItemSchema(arr.items, singleParams);
       }
 
+      if (path === "/receipts/get" && properties.order) {
+        // Swagger's "field" is a placeholder; the API expects actual field names.
+        const directions: JsonSchema = { type: "string", enum: ["ASC", "DESC"] };
+        properties.order = {
+          type: "object",
+          properties: Object.fromEntries(["date", "amount", "invoicenumber", "invoice_number", "invoicingparty", "counterparty"].map(name => [name, { ...directions }])),
+          additionalProperties: false,
+          description: properties.order.description,
+        };
+      }
+      // Swagger uses a literal path placeholder and omits its parameter.
+      if (path === "/receipts/get/id_by_customer" || path === "/transactions/get/id_by_customer") {
+        properties.id_by_customer = { type: "integer", minimum: 1,
+          description: "Required per-customer record ID obtained from the corresponding list tool." };
+        required.push("id_by_customer");
+      }
       const inputSchema = dropPhantomRequired({
         type: "object",
         properties,
@@ -372,6 +421,8 @@ export function buildToolDefs(): ToolDef[] {
       // (the batch summary is a bare "add batch receipts"), so describe the
       // capability from that and explain the array shape separately.
       const describedOp = singleOp ?? op;
+      const outputSchema = buildOutputSchema(op, defs);
+      adjustReadOutput(path, outputSchema);
 
       tools.push({
         name: TOOL_NAMES[path],
@@ -389,7 +440,7 @@ export function buildToolDefs(): ToolDef[] {
           path,
         }),
         inputSchema,
-        outputSchema: buildOutputSchema(op, defs),
+        outputSchema,
         title: toTitle(path, describedOp),
         ...(merge
           ? { singlePath: merge.singlePath, batchParam: merge.param }
