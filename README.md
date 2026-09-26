@@ -442,6 +442,9 @@ zugeordnete Pfade fallen konservativ auf die Kategorie *create* zurück).
 
 ## Entwicklung
 
+Hinweise zu korrigierten Buchungs- und Zuordnungsantworten, Teilfehlern und
+unklarem Schreibausgang: [Belege buchen und Zahlungen zuordnen](docs/write-postings.md).
+
 ```bash
 npm install
 npm run build      # TypeScript → dist/ kompilieren
