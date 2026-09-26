@@ -154,3 +154,135 @@ describe("BBClient.call", () => {
     expect(res.body).toEqual({ success: true, rows: [] });
   });
 });
+
+describe("read timeout and retry", () => {
+  const base = {
+    apiClient: "c",
+    apiSecret: "s",
+    apiKey: "k",
+    baseUrl: "https://bb.test/api/v1",
+    rateLimit: 90,
+    readTimeoutMs: 10_000,
+    readRetries: 2,
+  };
+  const ok = () => new Response('{"success":true}', { status: 200 });
+
+  /** A fetch that never answers on its own and only ends when aborted. */
+  const hang = (_url: string, init: RequestInit) =>
+    new Promise<Response>((_, reject) =>
+      init.signal?.addEventListener("abort", () => reject(init.signal?.reason))
+    );
+
+  afterEach(() => vi.useRealTimers());
+
+  it("retries a read that hit a gateway error", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("bad gateway", { status: 502 }))
+      .mockResolvedValueOnce(ok());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = new BBClient(base).call("/accounts/get", {}, { retry: true });
+    await vi.runAllTimersAsync();
+    expect((await pending).ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a read after a network error, then succeeds", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(ok());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = new BBClient(base).call("/accounts/get", {}, { retry: true });
+    await vi.runAllTimersAsync();
+    expect((await pending).body).toEqual({ success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps all attempts inside one time budget", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(hang);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = new BBClient(base).call("/accounts/get", {}, { retry: true });
+    const settled = expect(pending).rejects.toThrow(
+      /did not answer within 10s \(1 attempt\)/
+    );
+    await vi.advanceTimersByTimeAsync(10_000);
+    await settled;
+    // The first attempt used the whole budget, so no second one started.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a persistent gateway error instead of retrying forever", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response("unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = new BBClient(base).call("/accounts/get", {}, { retry: true });
+    await vi.runAllTimersAsync();
+    expect((await pending).status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops the running attempt when the client cancels, and starts no other", async () => {
+    const fetchMock = vi.fn(hang);
+    vi.stubGlobal("fetch", fetchMock);
+    const ctrl = new AbortController();
+
+    const pending = new BBClient(base).call(
+      "/accounts/get",
+      {},
+      { retry: true, signal: ctrl.signal }
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    ctrl.abort();
+    await expect(pending).rejects.toThrow(/cancelled by the client/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry after the client cancelled during the backoff", async () => {
+    const ctrl = new AbortController();
+    const fetchMock = vi.fn(async () => {
+      setTimeout(() => ctrl.abort(), 50);
+      return new Response("unavailable", { status: 503 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      new BBClient(base).call("/accounts/get", {}, { retry: true, signal: ctrl.signal })
+    ).rejects.toThrow(/cancelled by the client/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never retries or times out a call that did not opt in", async () => {
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(init.signal).toBeUndefined();
+      return new Response("unavailable", { status: 503 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await new BBClient(base).call("/receipts/add", {});
+    expect(res.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads timeout and retry settings from the environment", () => {
+    vi.stubEnv("BB_API_CLIENT", "c");
+    vi.stubEnv("BB_API_SECRET", "s");
+    vi.stubEnv("BB_API_KEY", "k");
+    expect(loadConfig()).toMatchObject({ readTimeoutMs: 55_000, readRetries: 2 });
+
+    vi.stubEnv("BB_READ_TIMEOUT_MS", "90000");
+    vi.stubEnv("BB_READ_RETRIES", "0");
+    expect(loadConfig()).toMatchObject({ readTimeoutMs: 90_000, readRetries: 0 });
+
+    vi.stubEnv("BB_READ_TIMEOUT_MS", "abc");
+    vi.stubEnv("BB_READ_RETRIES", "-1");
+    expect(loadConfig()).toMatchObject({ readTimeoutMs: 55_000, readRetries: 2 });
+  });
+});

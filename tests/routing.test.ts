@@ -284,3 +284,49 @@ describe("tool policy still binds through aliases", () => {
     }
   });
 });
+
+describe("retry policy by category", () => {
+  it("a read tool retries a gateway error, a write tool does not", async () => {
+    const fetchMock = vi.fn(async () => new Response("unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const write = await client.callTool({
+      name: "cost_locations_create",
+      arguments: { cost_locations: [{ code: "1", name: "x" }] },
+    });
+    expect(write.isError).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockClear();
+    const read = await client.callTool({ name: "accounts_list", arguments: {} });
+    expect(read.isError).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  }, 15_000);
+
+  it("a client-side timeout cancels the read on the server", async () => {
+    let attempts = 0;
+    let aborted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_, reject) => {
+            attempts++;
+            init.signal?.addEventListener("abort", () => {
+              aborted = true;
+              reject(init.signal?.reason);
+            });
+          })
+      )
+    );
+
+    await expect(
+      client.callTool({ name: "accounts_list", arguments: {} }, undefined, {
+        timeout: 100,
+      })
+    ).rejects.toThrow(/timed out/i);
+    await vi.waitFor(() => expect(aborted).toBe(true));
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(attempts).toBe(1);
+  });
+});

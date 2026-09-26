@@ -210,6 +210,8 @@ Alles wird in `.env` gesetzt (kopiert aus `.env.example`):
 | `MCP_MAX_SESSIONS` | — | `256` | Obergrenze gleichzeitiger Sessions |
 | `BB_ALLOW_API_KEY_OVERRIDE` | — | _(aus)_ | Erlaubt einem Tool-Aufruf, den `api_key` zu überschreiben |
 | `BB_RATE_LIMIT` | — | `90` | Clientseitiges Limit an Anfragen pro Minute |
+| `BB_READ_TIMEOUT_MS` | — | `55000` | Gesamtbudget eines Lese-Tools in Millisekunden, über alle Versuche. Liegt unter den 60 s, nach denen der SDK-Client aufgibt |
+| `BB_READ_RETRIES` | — | `2` | Weitere Versuche eines Lese-Tools nach Timeout, Netzwerkfehler oder HTTP 429/502/503/504 (max. 5), solange das Budget reicht. Bricht der Client ab, startet kein weiterer Versuch. Schreib-Tools werden nie wiederholt und haben kein Timeout |
 | `BB_BASE_URL` | — | _(aus der Spec)_ | Überschreibt die Basis-URL der API |
 
 Nach Änderungen an `.env` neu laden mit `docker compose up -d --force-recreate`.
