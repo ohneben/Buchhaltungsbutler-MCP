@@ -285,20 +285,12 @@ function buildOutputSchema(
   return resolved;
 }
 
-// Narrow compatibility corrections observed in real read-only API responses.
-// Keep missing values and numeric identifiers intact; never coerce accounting data.
+// Compatibility corrections for read-only API responses. Swagger types every
+// field as a plain string with nothing about which may be empty, and which ones
+// arrive as null depends on each customer's data, so every scalar record field
+// of a read endpoint may be null. Numeric identifiers stay narrow corrections
+// observed in real responses. Values are never coerced.
 function adjustReadOutput(path: string, schema: JsonSchema): void {
-  const nullable: Record<string, string[]> = {
-    "/accounts/get": ["postingaccount_number"],
-    "/settings/get/creditors": ["email", "uid_ch"],
-    "/settings/get/debtors": ["email", "uid_ch"],
-    "/settings/get/postingaccounts": ["parent_name", "subtype"],
-    "/postings/get": ["date_delivery", "transaction_amount", "transaction_id_by_customer", "receipt_id_by_customer"],
-    "/receipts/get": ["due_date", "link_to_receipt_id_by_customer", "payment_date", "account", "invoicenumber", "amount"],
-    "/receipts/get/id_by_customer": ["amount_original", "currency_original", "exchangerate", "payment_reference", "date_delivery", "date_payment_due", "link_to_receipt_id_by_customer", "vat", "payment_date", "account", "invoicenumber", "amount"],
-    "/transactions/get": ["purpose"],
-    "/transactions/get/id_by_customer": ["bank_name", "type", "booking_text"],
-  };
   const numeric: Record<string, string[]> = {
     "/postings/get": ["booking_number"],
     "/transactions/get": ["id_by_customer"],
@@ -308,14 +300,19 @@ function adjustReadOutput(path: string, schema: JsonSchema): void {
     "/transactions/get/id_by_customer": ["id_by_customer"],
   };
   const data = schema.properties?.data;
-  const fields = (data?.type === "array" ? data.items : data)?.properties;
-  for (const [type, names] of [["null", nullable[path] || []], ["integer", numeric[path] || []]] as const) {
-    for (const name of names) {
-      const field = fields?.[name];
-      if (field?.type === "string") field.type = ["string", type];
+  const fields = (data?.type === "array" ? data.items : data)?.properties ?? {};
+  for (const name of numeric[path] || []) {
+    if (fields[name]?.type === "string") fields[name].type = ["string", "integer"];
+  }
+  for (const field of Object.values(fields)) {
+    const types = Array.isArray(field.type) ? field.type : [field.type];
+    if (types.every((t) => SCALAR_TYPES.has(t as string))) {
+      field.type = [...new Set([...types, "null"])] as string[];
     }
   }
 }
+
+const SCALAR_TYPES = new Set(["string", "number", "integer", "boolean", "null"]);
 
 /** Assemble the description the model reads. */
 function buildDescription(args: {
@@ -425,7 +422,7 @@ export function buildToolDefs(): ToolDef[] {
       // capability from that and explain the array shape separately.
       const describedOp = singleOp ?? op;
       const outputSchema = buildOutputSchema(op, defs);
-      adjustReadOutput(path, outputSchema);
+      if (category.id === "read") adjustReadOutput(path, outputSchema);
 
       tools.push({
         name: TOOL_NAMES[path],
