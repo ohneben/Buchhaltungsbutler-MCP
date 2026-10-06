@@ -317,6 +317,15 @@ function adjustReadOutput(path: string, schema: JsonSchema): void {
   }
 }
 
+/**
+ * Swagger writes a per-record endpoint as a literal `/id_by_customer` suffix
+ * and never declares the parameter. Such a tool takes the ID as input and
+ * sends it in the path, not the body.
+ */
+export function takesIdInPath(path: string): boolean {
+  return path.endsWith("/id_by_customer");
+}
+
 /** Assemble the description the model reads. */
 function buildDescription(args: {
   category: CategoryMeta;
@@ -408,7 +417,7 @@ export function buildToolDefs(): ToolDef[] {
         };
       }
       // Swagger uses a literal path placeholder and omits its parameter.
-      if (path === "/receipts/get/id_by_customer" || path === "/transactions/get/id_by_customer") {
+      if (takesIdInPath(path)) {
         properties.id_by_customer = { type: "integer", minimum: 1,
           description: "Required per-customer record ID obtained from the corresponding list tool." };
         required.push("id_by_customer");

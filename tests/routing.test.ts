@@ -185,9 +185,22 @@ describe("results", () => {
     expect(res.structuredContent).toEqual(payload);
   });
 
+  it.each([
+    ["receipts_delete", "/receipts/delete/184"],
+    ["receipts_restore", "/receipts/restore/184"],
+  ])("routes %s using the numeric ID in the path", async (name, path) => {
+    const seen = stubFetch();
+    const { tools } = await client.listTools();
+    expect(tools.find(t => t.name === name)!.inputSchema.required).toContain("id_by_customer");
+    const res = await client.callTool({ name, arguments: { id_by_customer: 184 } });
+    expect(res.isError).toBeFalsy();
+    expect(seen[0].path).toBe(path);
+    expect(seen[0].body).not.toHaveProperty("id_by_customer");
+  });
+
   it.each([undefined, 0, -1, 1.5, "../add", Number.MAX_SAFE_INTEGER + 1])("rejects an unsafe single-record ID before network access: %s", async (id) => {
     const seen = stubFetch();
-    for (const name of ["receipts_get_by_id", "transactions_get_by_id"]) {
+    for (const name of ["receipts_get_by_id", "transactions_get_by_id", "receipts_delete", "receipts_restore"]) {
       const res = await client.callTool({ name, arguments: { id_by_customer: id } });
       expect(res.isError).toBe(true);
     }
