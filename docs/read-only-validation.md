@@ -31,9 +31,11 @@ Beispiel einer zulässigen API-Antwort mit synthetischen Werten:
 ```
 
 Die numerische ID darf nicht allein deshalb zurückgewiesen werden, weil das
-Beispiel der Swagger-Spezifikation einen String verwendet. Optionale Felder
-können null sein. Die gezielten Kompatibilitätskorrekturen erweitern nur bekannte
-Antwortfelder; sie ersetzen keine Werte und lockern keine schreibenden Eingaben.
+Beispiel der Swagger-Spezifikation einen String verwendet. Welche Felder null
+sind, hängt vom Datenbestand des Mandanten ab. Deshalb erlaubt das Antwortschema
+jedes einfache Datensatzfeld eines Lesewerkzeugs auch als `null`. Numerische IDs
+bleiben gezielte Korrekturen für beobachtete Antwortfelder. Werte werden nie
+ersetzt, schreibende Eingaben werden nicht gelockert.
 
 ## Optionale Live-Prüfung
 
