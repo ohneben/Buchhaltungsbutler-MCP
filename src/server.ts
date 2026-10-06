@@ -10,7 +10,7 @@ import {
   ListToolsRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { buildToolDefs, specInfo, type ToolDef } from "./spec.js";
+import { buildToolDefs, specInfo, takesIdInPath, type ToolDef } from "./spec.js";
 import { buildAliases } from "./naming.js";
 import { BBClient, type BBConfig } from "./client.js";
 import { hasWriteBatchErrors } from "./write-compat.js";
@@ -154,7 +154,7 @@ export function createServer(client: BBClient): Server {
         : def.path;
 
     let requestArgs = args;
-    if (def.path === "/receipts/get/id_by_customer" || def.path === "/transactions/get/id_by_customer") {
+    if (takesIdInPath(def.path)) {
       const id = args.id_by_customer;
       if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
         return { isError: true, content: [{ type: "text", text: "id_by_customer must be a positive safe integer." }] };
