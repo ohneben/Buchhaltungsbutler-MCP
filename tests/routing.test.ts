@@ -234,6 +234,32 @@ describe("results", () => {
     expect(res.structuredContent).toEqual(payload);
   });
 
+  it.each([
+    ["receipts_list", { list_direction: "outbound" }, { success: true, data: [{ id_by_customer: "1", counterparty: null, date: null }] }],
+    ["receipts_get_by_id", { id_by_customer: 123 }, { success: true, data: { id_by_customer: "123", counterparty: null, date: null } }],
+    ["transactions_get_by_id", { id_by_customer: 123 }, { success: true, data: { id_by_customer: 123, account_number: null, bank_code: null } }],
+  ])("accepts customer-dependent null fields for %s", async (name, args, payload) => {
+    stubFetch(payload);
+    await client.listTools();
+    const res = await client.callTool({ name: name as string, arguments: args as Record<string, unknown> });
+    expect(res.isError).toBeFalsy();
+    expect(res.structuredContent).toEqual(payload);
+  });
+
+  it("declares every scalar record field of a read tool as nullable", async () => {
+    const { tools } = await client.listTools();
+    const reads = tools.filter(t => t.annotations?.readOnlyHint);
+    expect(reads.length).toBeGreaterThan(0);
+    for (const t of reads) {
+      const data = (t.outputSchema?.properties as Record<string, { type?: string; items?: { properties?: object }; properties?: object }> | undefined)?.data;
+      const fields = (data?.type === "array" ? data.items?.properties : data?.properties) ?? {};
+      for (const [field, schema] of Object.entries(fields as Record<string, { type?: string | string[] }>)) {
+        if (schema.type === "object" || schema.type === "array" || schema.type === undefined) continue;
+        expect(schema.type, `${t.name}.${field}`).toContain("null");
+      }
+    }
+  });
+
   it("still rejects malformed receipt amounts", async () => {
     stubFetch({ success: true, data: [{ amount: false }] });
     await client.listTools();
